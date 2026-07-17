@@ -1,0 +1,12 @@
+*.zip
+*.bin
+*.elf
+*.map
+*.o
+*.a
+
+.vscode/
+
+build/
+
+*.log
