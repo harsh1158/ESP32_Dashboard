@@ -1,6 +1,10 @@
 #ifndef API_H
 #define API_H
 
+#include "probe_database.h"
+
+bool loggedIn = false;
+
 void handleRoot()
 {
     if(!isClientAllowed())
@@ -14,8 +18,14 @@ void handleRoot()
         );
         return;
     }
-
+if(loggedIn)
+{
     server.send(200,"text/html",MAIN_page);
+}
+else
+{
+    server.send(200,"text/html",LOGIN_PAGE);
+}
 }
 
 /*****************************************************
@@ -23,12 +33,19 @@ void handleRoot()
  *****************************************************/
 void handleSave()
 {   
-     if(!isClientAllowed())
+    if(!loggedIn)
+{
+    server.send(401,
+                "text/plain",
+                "Unauthorized");
+
+    return;
+}
+    if(!isClientAllowed())
 {
     server.send(403,
                 "text/plain",
                 "Maximum 1 Client Allowed");
-
     return;
 }
     if (!server.hasArg("id"))
@@ -38,24 +55,30 @@ void handleSave()
     }
 
     device.id = server.arg("id");
+device.expiryYear = server.arg("expiry").toInt();
+device.useTime = server.arg("useTime").toInt();
 
-    device.expiryYear = server.arg("expiry").toInt();
-    device.useTime =
-        server.arg("useTime").toInt();
-
-    /*****************************************************
-     * Temporary values
-     * Later these will come from UART
-     *****************************************************/
-    createDefaultDevice(device);
-
-    saveDevice(device);
-
+for (int i = 0; i < TOTAL_PROBES; i++)
+{
+    if (device.id == probeDatabase[i].id)
+    {
+        device.probeName = probeDatabase[i].probeName;
+        device.totalCycle = probeDatabase[i].totalCycle;
+        device.totalPulse = probeDatabase[i].totalPulse;
+        break;
+    }
+}
+saveDevice(device);
+Serial.println("===== DATABASE MATCH =====");
+Serial.println(device.id);
+Serial.println(device.probeName);
+Serial.println(device.totalCycle);
+Serial.println(device.totalPulse);
+Serial.println("==========================");
     Serial.println();
     Serial.println("======================================");
     Serial.println("DATA SAVED TO FLASH");
     Serial.println("======================================");
-
     Serial.print("ID          : ");
     Serial.println(device.id);
 
@@ -65,11 +88,11 @@ void handleSave()
     Serial.print("Use Time    : ");
     Serial.println(device.useTime);
 
-    Serial.print("Cycle       : ");
-    Serial.println(device.cycle);
+    Serial.print("Probe Name  : ");
+    Serial.println(device.probeName);
 
-    Serial.print("Pulse Cycle : ");
-    Serial.println(device.pulseCycle);
+    Serial.print("Total Cycle : ");
+    Serial.println(device.totalCycle);
 
     Serial.print("Total Pulse : ");
     Serial.println(device.totalPulse);
@@ -81,7 +104,16 @@ void handleSave()
 
 void handleRead()
 {
-     if(!isClientAllowed())
+    if(!loggedIn)
+{
+    server.send(401,
+                "text/plain",
+                "Unauthorized");
+
+    return;
+}
+
+    if(!isClientAllowed())
 {
     server.send(403,
                 "text/plain",
@@ -94,25 +126,28 @@ void handleRead()
         server.send(400, "text/plain", "Missing ID");
         return;
     }
-
     device.id = server.arg("id");
-
     readDevice(device);
+
+    for (int i = 0; i < TOTAL_PROBES; i++)
+{
+    if (device.id == probeDatabase[i].id)
+    {
+        device.probeName = probeDatabase[i].probeName;
+        device.totalCycle = probeDatabase[i].totalCycle;
+        device.totalPulse = probeDatabase[i].totalPulse;
+        break;
+    }
+}
 
     String json = "{";
 
     json += "\"id\":\"" + device.id + "\",";
-
     json += "\"expiry\":" + String(device.expiryYear) + ",";
-
     json += "\"useTime\":" + String(device.useTime) + ",";
-
-    json += "\"cycle\":\"" + String(device.cycle) + "\",";
-
-    json += "\"pulse\":\"" + String(device.pulseCycle) + "\",";
-
-    json += "\"total\":\"" + String(device.totalPulse) + "\"";
-
+    json += "\"probeName\":\"" + device.probeName + "\",";
+    json += "\"totalCycle\":\"" + String(device.totalCycle) + "\",";
+    json += "\"totalPulse\":\"" + String(device.totalPulse) + "\"";
     json += "}";
 
     Serial.println();
@@ -129,18 +164,109 @@ void handleRead()
     Serial.print("Use Time    : ");
     Serial.println(device.useTime);
 
-    Serial.print("Cycle       : ");
-    Serial.println(device.cycle);
+   Serial.print("Probe Name  : ");
+Serial.println(device.probeName);
 
-    Serial.print("Pulse Cycle : ");
-    Serial.println(device.pulseCycle);
+Serial.print("Total Cycle : ");
+Serial.println(device.totalCycle);
 
-    Serial.print("Total Pulse : ");
-    Serial.println(device.totalPulse);
+Serial.print("Total Pulse : ");
+Serial.println(device.totalPulse);
 
     Serial.println("======================================");
 
     server.send(200, "application/json", json);
+}
+
+void handleLogin()
+{
+    String username = server.arg("username");
+    String password = server.arg("password");
+
+    String storedUsername =
+    prefs.getString("username");
+
+    String storedPassword =
+    prefs.getString("password");
+    if(username == storedUsername &&
+    password == storedPassword)
+    {
+    loggedIn = true;
+
+    server.send(200,
+                "text/plain",
+                "Login Success");
+}
+    else
+    {
+        server.send(401,
+                    "text/plain",
+                    "Invalid Username or Password");
+    }
+}
+
+void handleLogout()
+{
+    loggedIn = false;
+
+    server.send(200,
+                "text/plain",
+                "Logout Success");
+}
+
+void handleChangeLogin()
+{
+    if(!loggedIn)
+    {
+        server.send(401, "text/plain", "Unauthorized");
+        return;
+    }
+
+    String currentPassword = server.arg("currentPassword");
+    String newUsername     = server.arg("newUsername");
+    String newPassword     = server.arg("newPassword");
+    String confirmPassword = server.arg("confirmPassword");
+
+    String storedPassword = prefs.getString("password");
+
+    if(currentPassword != storedPassword)
+    {
+        server.send(400,
+                    "text/plain",
+                    "Current Password Incorrect");
+        return;
+    }
+
+    if(newUsername.length() == 0)
+    {
+        server.send(400,
+                    "text/plain",
+                    "Username Cannot Be Empty");
+        return;
+    }
+
+    if(newPassword.length() == 0)
+    {
+        server.send(400,
+                    "text/plain",
+                    "Password Cannot Be Empty");
+        return;
+    }
+
+    if(newPassword != confirmPassword)
+    {
+        server.send(400,
+                    "text/plain",
+                    "Passwords Do Not Match");
+        return;
+    }
+
+    prefs.putString("username", newUsername);
+    prefs.putString("password", newPassword);
+
+    server.send(200,
+                "text/plain",
+                "Login Updated Successfully");
 }
 
 #endif

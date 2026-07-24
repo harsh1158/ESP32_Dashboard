@@ -4,6 +4,7 @@
 
 #include "wifi_config.h"
 #include "dashboard.h"
+#include "login.h"
 #include "device.h"
 #include "storage.h"
 #include "security.h"
@@ -22,12 +23,24 @@ void setup()
     Serial.begin(115200);
     Serial.println("******** SETUP START ********");
     Serial.println("Before prefs.begin()");
-prefs.begin("dashboard", false);
+    prefs.begin("dashboard", false);
 
-Serial.println("Before initializeDatabase()");
-initializeDatabase();
+    Serial.println("Before initializeDatabase()");
 
-Serial.println("After initializeDatabase()");
+    Serial.println("Preferences Cleared");
+
+    if(!prefs.isKey("username"))
+{
+    prefs.putString("username", "admin");
+}
+
+if(!prefs.isKey("password"))
+{
+    prefs.putString("password", "1234");
+}
+    initializeDatabase();
+    
+    Serial.println("After initializeDatabase()");
     prefs.begin("dashboard", false);
     Serial.println("Preferences Ready");
     Serial.println();
@@ -37,13 +50,13 @@ Serial.println("After initializeDatabase()");
 
     WiFi.mode(WIFI_STA);
     if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS))
-{
-    Serial.println("Static IP Configuration Failed!");
-}
-else
-{
-    Serial.println("Static IP Configured Successfully");
-}
+    {
+        Serial.println("Static IP Configuration Failed!");
+    }
+    else
+    {
+        Serial.println("Static IP Configured Successfully");
+    }
 
     Serial.println("Connecting to WiFi...");
 
@@ -75,6 +88,9 @@ else
  *****************************************************/
 
 server.on("/", handleRoot);
+server.on("/login", HTTP_POST, handleLogin);
+server.on("/changeLogin", HTTP_POST, handleChangeLogin);
+server.on("/logout", HTTP_GET, handleLogout);
 server.on("/save", HTTP_POST, handleSave);
 server.on("/read", HTTP_GET, handleRead);
 server.begin();
@@ -91,13 +107,10 @@ Serial.println("======================================");
 void loop()
 {
     server.handleClient();
-
     if (WiFi.status() != WL_CONNECTED)
     {
         Serial.println("WiFi Lost... Reconnecting");
-
         WiFi.disconnect();
-
         WiFi.begin(ssid, password);
 
         while (WiFi.status() != WL_CONNECTED)
@@ -105,10 +118,8 @@ void loop()
             delay(500);
             Serial.print(".");
         }
-
         Serial.println();
         Serial.println("Reconnected");
     }
-
     delay(50);
 }

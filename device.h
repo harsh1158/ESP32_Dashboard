@@ -6,15 +6,19 @@
 struct Device
 {
     String id;
+    String probeName;
 
     int expiryYear;
-
-    int cycle;
-
-    int pulseCycle;
-
+    int totalCycle;
     int totalPulse;
+    int useTime;
+};
 
+struct DeviceStorage
+{
+    int expiryYear;
+    int totalCycle;
+    int totalPulse;
     int useTime;
 };
 

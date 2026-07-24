@@ -2,9 +2,36 @@
 #define STORAGE_H
 
 #include "device.h"
+#include "probe_database.h"
+#include <string.h>
 #include <Preferences.h>
 
 extern Preferences prefs;
+
+void saveStruct(String key, DeviceStorage &data)
+{
+    prefs.putBytes(key.c_str(),
+                   &data,
+                   sizeof(DeviceStorage));
+}
+
+void readStruct(String key, DeviceStorage &data)
+{
+    memset(&data, 0, sizeof(DeviceStorage));
+
+    size_t len =
+        prefs.getBytes(key.c_str(),
+                       &data,
+                       sizeof(DeviceStorage));
+
+    if(len != sizeof(DeviceStorage))
+    {
+        data.expiryYear = 1;
+        data.totalCycle = 0;
+        data.totalPulse = 0;
+        data.useTime = 6;
+    }
+}
 
 void saveString(String key, String value)
 {
@@ -28,76 +55,31 @@ int readInt(String key, int defaultValue = 0)
 
 void saveDevice(Device &device)
 {
-    saveString(device.id + "_expiry", String(device.expiryYear));
+    DeviceStorage data;
 
-    saveInt(device.id + "_cycle", device.cycle);
-
-    saveInt(device.id + "_pulse", device.pulseCycle);
-
-    saveInt(device.id + "_total", device.totalPulse);
-
-    saveInt(device.id + "_useTime", device.useTime);
+    data.expiryYear = device.expiryYear;
+    data.totalCycle = device.totalCycle;
+    data.totalPulse = device.totalPulse;
+    data.useTime    = device.useTime;
+    
+    saveStruct(device.id, data);
 }
 
 void readDevice(Device &device)
 {
-    device.expiryYear =
-        readString(device.id + "_expiry", "1").toInt();
+    DeviceStorage data;
 
-    device.cycle =
-        readInt(device.id + "_cycle", 0);
+    readStruct(device.id, data);
 
-    device.pulseCycle =
-        readInt(device.id + "_pulse", 0);
-
-    device.totalPulse =
-        readInt(device.id + "_total", 0);
-
-    device.useTime =
-        readInt(device.id + "_useTime", 6);
-}
-
-void createDefaultDevice(Device &device)
-{
-    if(device.id=="ID001")
-    {
-        device.cycle=1000;
-        device.pulseCycle=10;
-    }
-    else if(device.id=="ID002")
-    {
-        device.cycle=1500;
-        device.pulseCycle=15;
-    }
-    else if(device.id=="ID003")
-    {
-        device.cycle=2000;
-        device.pulseCycle=20;
-    }
-    else if(device.id=="ID004")
-    {
-        device.cycle=2500;
-        device.pulseCycle=25;
-    }
-    else if(device.id=="ID005")
-    {
-        device.cycle=3000;
-        device.pulseCycle=30;
-    }
-    else
-    {
-        device.cycle=0;
-        device.pulseCycle=0;
-    }
-
-    device.totalPulse=
-    device.cycle*
-    device.pulseCycle;
+    device.expiryYear = data.expiryYear;
+    device.totalCycle = data.totalCycle;
+    device.totalPulse = data.totalPulse;
+    device.useTime    = data.useTime;
 }
 
 void initializeDatabase()
-{    
-    if(readString("database_init","0")=="1")
+{
+    if (readString("database_init", "0") == "1")
     {
         Serial.println("Flash Database Already Exists");
         return;
@@ -107,23 +89,18 @@ void initializeDatabase()
 
     Device temp;
 
-    for(int i=1;i<=10;i++)
+    for (int i = 0; i < TOTAL_PROBES; i++)
     {
-        char id[6];
-        sprintf(id,"ID%03d",i);
-
-        temp.id=id;
-
-        temp.expiryYear=1;
-
-        temp.useTime=6;
-
-        createDefaultDevice(temp);
+        temp.id = probeDatabase[i].id;
+        temp.expiryYear = 1;
+        temp.totalCycle = 0;
+        temp.totalPulse = 0;
+        temp.useTime = 6;
 
         saveDevice(temp);
     }
 
-    saveString("database_init","1");
+    saveString("database_init", "1");
 
     Serial.println("Flash Database Created Successfully");
 }
