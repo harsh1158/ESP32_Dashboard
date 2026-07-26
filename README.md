@@ -1,25 +1,23 @@
 # ESP32 Dashboard
 
-A professional ESP32 Web Dashboard built using the Arduino Framework.
+An ESP32-based Web Dashboard developed using the Arduino Framework.
 
-This project provides a responsive web interface for configuring and monitoring an ESP32 device over WiFi.
+The project provides a browser-based interface to configure probe data, store configuration in ESP32 Flash Memory, and retrieve the saved configuration whenever required.
 
 ---
 
-# Project Structure
+# Features
 
-```
-ESP32_Dashboard/
-│
-├── ESP32_Dashboard.ino      # Main Arduino file
-├── api.h                    # REST API Handlers
-├── dashboard.h              # HTML Dashboard
-├── storage.h                # Flash Storage Functions
-├── device.h                 # Device Structure
-├── security.h               # Single Client Security
-├── wifi_config.h            # WiFi Configuration
-└── README.md
-```
+- Login Authentication
+- Change Username & Password
+- Automatic Logout after Password Change
+- Single Client Access (Only One Client Allowed)
+- Probe Selection
+- Save Configuration to ESP32 Flash Memory
+- Read Configuration from Flash Memory
+- Responsive Web Dashboard
+- REST API Communication
+- Serial Debug Logs
 
 ---
 
@@ -27,92 +25,86 @@ ESP32_Dashboard/
 
 - ESP32 Development Board
 - USB Cable
-- PC/Laptop
-- WiFi Router
+- PC / Laptop
 
 ---
 
 # Software Required
 
-- Arduino IDE 2.x
-- ESP32 Arduino Board Package
-- Git
-- GitHub Account
+## 1. Arduino IDE
+
+Download and install the latest Arduino IDE.
+
+https://www.arduino.cc/en/software
 
 ---
 
-# Arduino Libraries
+## 2. ESP32 Board Package
 
-Install the following libraries:
+Open Arduino IDE
 
-```
-WiFi
-WebServer
-Preferences
-```
+Go to
 
-These libraries are included with the ESP32 Arduino Core.
+Tools → Board → Boards Manager
 
----
+Search
 
-# ESP32 Board Installation
-
-1. Open Arduino IDE.
-
-2. Go to
-
-```
-File
-→ Preferences
-```
-
-3. Add the ESP32 Board Manager URL
-
-```
-https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-```
-
-4. Open
-
-```
-Tools
-→ Board
-→ Boards Manager
-```
-
-5. Search
-
-```
 ESP32
-```
 
-6. Install
+Install
+
+ESP32 by Espressif Systems
+
+---
+
+# Required Libraries
+
+No external libraries are required.
+
+The project only uses the libraries included with the ESP32 Arduino Core.
 
 ```
-esp32 by Espressif Systems
+WiFi.h
+WebServer.h
+Preferences.h
 ```
 
 ---
 
-# Clone Repository
+# Project Files
 
-Using HTTPS
+```
+ESP32_Dashboard
+│
+├── ESP32_Dashboard.ino      Main Program
+├── api.h                    HTTP API Handlers
+├── dashboard.h              Dashboard HTML/CSS/JavaScript
+├── login.h                  Login Page HTML/CSS/JavaScript
+├── device.h                 Device Structures
+├── probe_database.h         Probe Database
+├── security.h               Login & Client Security
+├── storage.h                Flash Storage Functions
+├── wifi_config.h            WiFi Configuration
+└── README.md
+```
 
-```bash
+---
+
+# How to Run the Project
+
+## Step 1
+
+Clone the repository
+
+```
 git clone https://github.com/harsh1158/ESP32_Dashboard.git
 ```
 
-or using SSH
-
-```bash
-git clone git@github.com:harsh1158/ESP32_Dashboard.git
-```
+or download the ZIP file and extract it.
 
 ---
 
-# Open Project
-
-Open Arduino IDE
+## Step 2
 
 Open
 
@@ -120,35 +112,84 @@ Open
 ESP32_Dashboard.ino
 ```
 
+using Arduino IDE.
+
 ---
 
-# Configure WiFi
+## Step 3
 
-Edit
+Open
 
 ```
 wifi_config.h
 ```
 
+Modify the WiFi credentials.
+
 Example
 
 ```cpp
 const char* ssid = "YOUR_WIFI_NAME";
-const char* password = "YOUR_PASSWORD";
+const char* password = "YOUR_WIFI_PASSWORD";
+```
+
+If Static IP is required, modify
+
+```cpp
+IPAddress local_IP(...);
+IPAddress gateway(...);
+IPAddress subnet(...);
+IPAddress primaryDNS(...);
+IPAddress secondaryDNS(...);
 ```
 
 ---
 
-# Upload Project
+## Step 4
 
-Select
+Connect the ESP32 using USB.
+
+---
+
+## Step 5
+
+Select the correct board
 
 ```
-Board :
+Tools
+
+↓
+
+Board
+
+↓
+
 ESP32 Dev Module
 ```
 
+(or the appropriate ESP32 board)
+
+---
+
+## Step 6
+
 Select the correct COM Port
+
+```
+Tools
+
+↓
+
+Port
+
+↓
+
+Select ESP32 Port
+```
+
+---
+
+## Step 7
 
 Click
 
@@ -158,103 +199,91 @@ Upload
 
 ---
 
-# Serial Monitor
+## Step 8
 
-Baud Rate
-
-```
-115200
-```
-
-Example Output
+Open
 
 ```
-ESP32 WiFi Module
-
-WiFi Connected Successfully
-
-HTTP Server Started Successfully
-
-Open Browser
-
-http://192.168.1.100
+Serial Monitor
 ```
+
+Select the baud rate used in the project (for example, **115200**).
 
 ---
 
-# Open Dashboard
+## Step 9
 
-Open your browser
+After successful WiFi connection, the ESP32 prints its IP address.
+
+Example
+
+```
+Connected Successfully
+
+IP Address :
+
+192.168.1.100
+```
+
+Open a browser and enter
 
 ```
 http://192.168.1.100
 ```
 
+(Replace with the IP shown on the Serial Monitor if different.)
+
 ---
 
-# Dashboard Functions
+# Login
 
-Available Fields
+The login page appears first.
 
-- ID
-- Present Date
+Enter the configured username and password.
+
+After successful login, the Dashboard opens.
+
+---
+
+# Dashboard
+
+The dashboard allows the user to
+
+- Select Probe
+- View Probe Information
+- Change Expiry Year
+- Change Use Time
+- Save Configuration
+- Read Configuration
+- Change Login Credentials
+- Logout
+
+---
+
+# Flash Memory
+
+The following fields are permanently stored in ESP32 Flash Memory.
+
 - Expiry Year
-- Cycle
-- Pulse Cycle
+- Total Cycle
 - Total Pulse
-- My Use Time
-
-Buttons
-
-- SUBMIT
-- READ
-
----
-
-# REST APIs
-
-## Save Data
-
-```
-POST /save
-```
-
-Stores device configuration into ESP32 Flash.
-
----
-
-## Read Data
-
-```
-POST /read
-```
-
-Reads device configuration from ESP32 Flash.
-
----
-
-# Flash Storage
-
-Uses
-
-```
-Preferences (NVS)
-```
-
-Stored Parameters
-
-- Device ID
-- Expiry Year
 - Use Time
-- Cycle
-- Pulse Cycle
-- Total Pulse
+
+The saved values remain available even after restarting or powering off the ESP32.
 
 ---
 
-# Security
+# Browser Support
 
-Current Features
+- Google Chrome
+- Microsoft Edge
+- Mozilla Firefox
 
-- Single Client Access
-- Client IP Verification
+---
+
+# Tested On
+
+- ESP32 Dev Module
+- Arduino IDE 2.x
+- ESP32 Arduino Core
+- Ubuntu Linux
