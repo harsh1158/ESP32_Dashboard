@@ -39,7 +39,7 @@ if(!prefs.isKey("password"))
     prefs.putString("password", "1234");
 }
     initializeDatabase();
-    
+
     Serial.println("After initializeDatabase()");
     prefs.begin("dashboard", false);
     Serial.println("Preferences Ready");

@@ -63,6 +63,7 @@ for (int i = 0; i < TOTAL_PROBES; i++)
     if (device.id == probeDatabase[i].id)
     {
         device.probeName = probeDatabase[i].probeName;
+        device.pulseStrategy = probeDatabase[i].pulseStrategy;
         device.totalCycle = probeDatabase[i].totalCycle;
         device.totalPulse = probeDatabase[i].totalPulse;
         break;
@@ -91,6 +92,9 @@ Serial.println("==========================");
     Serial.print("Probe Name  : ");
     Serial.println(device.probeName);
 
+    Serial.print("Pulse Strategy  : ");
+    Serial.println(device.pulseStrategy);
+    
     Serial.print("Total Cycle : ");
     Serial.println(device.totalCycle);
 
@@ -129,23 +133,13 @@ void handleRead()
     device.id = server.arg("id");
     readDevice(device);
 
-    for (int i = 0; i < TOTAL_PROBES; i++)
-{
-    if (device.id == probeDatabase[i].id)
-    {
-        device.probeName = probeDatabase[i].probeName;
-        device.totalCycle = probeDatabase[i].totalCycle;
-        device.totalPulse = probeDatabase[i].totalPulse;
-        break;
-    }
-}
-
     String json = "{";
 
     json += "\"id\":\"" + device.id + "\",";
     json += "\"expiry\":" + String(device.expiryYear) + ",";
     json += "\"useTime\":" + String(device.useTime) + ",";
     json += "\"probeName\":\"" + device.probeName + "\",";
+    json += "\"pulseStrategy\":\"" + device.pulseStrategy + "\",";
     json += "\"totalCycle\":\"" + String(device.totalCycle) + "\",";
     json += "\"totalPulse\":\"" + String(device.totalPulse) + "\"";
     json += "}";
@@ -166,6 +160,9 @@ void handleRead()
 
    Serial.print("Probe Name  : ");
 Serial.println(device.probeName);
+
+Serial.print("Pulse Strategy  : ");
+Serial.println(device.pulseStrategy);
 
 Serial.print("Total Cycle : ");
 Serial.println(device.totalCycle);

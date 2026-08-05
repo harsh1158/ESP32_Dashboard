@@ -8,7 +8,7 @@ const char MAIN_page[] PROGMEM = R"rawliteral(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESP32 Dashboard</title>
+<title> Dashboard </title>
 <style>
 
 *
@@ -275,7 +275,7 @@ LOGO
 </div>
 
 <div class="title">
-ESP32 Dashboard
+Dashboard
 </div>
 
 <div class="menuContainer">
@@ -312,27 +312,27 @@ Logout
 
 <option value="">Select Probe</option>
 
-<option value="1">SP_275X12MM</option>
+<option value="1">SP_275X12MM_80</option>
 <option value="2">SP_275X12MM_120</option>
 <option value="3">SP_375X12MM_80</option>
-<option value="4">SP_300X12MM</option>
-<option value="5">SP_325X12MM</option>
-<option value="6">SP_350X12MM</option>
-<option value="7">MP_450X60MM</option>
-<option value="8">MP_500X60MM</option>
-<option value="9">MP_550X60MM</option>
-<option value="10">SP_250X12MM</option>
+<option value="4">SP_300X12MM_80</option>
+<option value="5">SP_325X12MM_80</option>
+<option value="6">SP_350X12MM_80</option>
+<option value="7">MP_450X60MM_150</option>
+<option value="8">MP_500X60MM_150</option>
+<option value="9">MP_550X60MM_150</option>
+<option value="10">SP_250X12MM_80</option>
 <option value="11">SP_250X12MM_120</option>
 <option value="12">SP_325X12MM_120</option>
-<option value="13">SP_400x12MM</option>
-<option value="14">MP_600X60MM</option>
-<option value="15">MP_700X60MM</option>
+<option value="13">SP_400x12MM_80</option>
+<option value="14">MP_600X60MM_150</option>
+<option value="15">MP_700X60MM_150</option>
 <option value="16">SP_350X12MM_120</option>
 <option value="17">MP_350X60MM_300</option>
 <option value="18">MP_350X40MM_150</option>
 <option value="19">MP_700X60MM_300</option>
 <option value="20">MP_350X60MM_150</option>
-<option value="21">MP_650X60MM</option>
+<option value="21">MP_650X60MM_150</option>
 <option value="22">MP_400X60MM_150</option>
 <option value="23">MP_400X40MM_150</option>
 <option value="24">SP_300X12MM_120</option>
@@ -364,6 +364,14 @@ Logout
 </select>
 </div>
 
+<div class="form-group">
+    <label>Pulse Strategy</label>
+    <input
+    type="text"
+    id="pulseStrategy"
+    value="0"
+    readonly>
+</div>
 
 <div class="form-group">
 <label>Total Cycle</label>
@@ -490,6 +498,7 @@ Ready
 const idDropdown = document.getElementById("deviceID");
 const expiryYear = document.getElementById("expiryYear");
 const useTime = document.getElementById("useTime");
+const pulseStrategy = document.getElementById("pulseStrategy");
 const totalCycle = document.getElementById("totalCycle");
 const totalPulse = document.getElementById("totalPulse");
 const presentDate = document.getElementById("presentDate");
@@ -615,6 +624,7 @@ idDropdown.addEventListener("change", function()
     expiryYear.value = data.expiry;
     useTime.value = data.useTime;
 
+    pulseStrategy.value = data.pulseStrategy; 
     totalCycle.value = data.totalCycle;
     totalPulse.value = data.totalPulse;
 
@@ -651,6 +661,7 @@ readButton.addEventListener("click", function()
     expiryYear.value = data.expiry;
     useTime.value = data.useTime;
 
+    pulseStrategy.value = data.pulseStrategy;
     totalCycle.value = data.totalCycle;
     totalPulse.value = data.totalPulse;
 

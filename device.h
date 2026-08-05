@@ -7,7 +7,7 @@ struct Device
 {
     String id;
     String probeName;
-
+    String pulseStrategy; 
     int expiryYear;
     int totalCycle;
     int totalPulse;
@@ -16,6 +16,9 @@ struct Device
 
 struct DeviceStorage
 {
+    char probeName[40];
+    char pulseStrategy[20];
+
     int expiryYear;
     int totalCycle;
     int totalPulse;

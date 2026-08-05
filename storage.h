@@ -57,12 +57,22 @@ void saveDevice(Device &device)
 {
     DeviceStorage data;
 
-    data.expiryYear = device.expiryYear;
-    data.totalCycle = device.totalCycle;
-    data.totalPulse = device.totalPulse;
-    data.useTime    = device.useTime;
-    
-    saveStruct(device.id, data);
+memset(&data, 0, sizeof(DeviceStorage));
+
+strncpy(data.probeName,
+        device.probeName.c_str(),
+        sizeof(data.probeName) - 1);
+
+strncpy(data.pulseStrategy,
+        device.pulseStrategy.c_str(),
+        sizeof(data.pulseStrategy) - 1);
+
+data.expiryYear = device.expiryYear;
+data.totalCycle = device.totalCycle;
+data.totalPulse = device.totalPulse;
+data.useTime    = device.useTime;
+
+saveStruct(device.id, data);
 }
 
 void readDevice(Device &device)
@@ -70,6 +80,9 @@ void readDevice(Device &device)
     DeviceStorage data;
 
     readStruct(device.id, data);
+
+    device.probeName = String(data.probeName);
+    device.pulseStrategy = String(data.pulseStrategy);
 
     device.expiryYear = data.expiryYear;
     device.totalCycle = data.totalCycle;
@@ -92,10 +105,13 @@ void initializeDatabase()
     for (int i = 0; i < TOTAL_PROBES; i++)
     {
         temp.id = probeDatabase[i].id;
-        temp.expiryYear = 1;
-        temp.totalCycle = 0;
-        temp.totalPulse = 0;
-        temp.useTime = 6;
+temp.probeName = probeDatabase[i].probeName;
+temp.pulseStrategy = probeDatabase[i].pulseStrategy;
+
+temp.expiryYear = 1;
+temp.totalCycle = probeDatabase[i].totalCycle;
+temp.totalPulse = probeDatabase[i].totalPulse;
+temp.useTime = 6;
 
         saveDevice(temp);
     }
