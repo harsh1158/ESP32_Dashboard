@@ -1,0 +1,38 @@
+#ifndef AT21CS01_H
+#define AT21CS01_H
+
+#include <Arduino.h>
+
+class AT21CS01
+{
+public:
+
+    // Constructor
+    AT21CS01(uint8_t pin);
+
+    // Initialize EEPROM interface
+    bool begin();
+
+    // AT21CS01 reset / presence detection
+    bool reset();
+
+    // Low-level bit operations
+    void writeBit(bool bit);
+    bool readBit();
+
+    // Byte operations
+    bool writeByte(uint8_t value);
+    uint8_t readByte();
+
+private:
+
+    uint8_t ioPin;
+
+    // Put SI/O line in released/high-Z state
+    void releaseLine();
+
+    // Pull SI/O line LOW
+    void pullLineLow();
+};
+
+#endif

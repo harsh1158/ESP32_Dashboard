@@ -70,6 +70,19 @@ for (int i = 0; i < TOTAL_PROBES; i++)
     }
 }
 saveDevice(device);
+
+bool eepromSaved = saveProbeToAT21CS01(device);
+if (!eepromSaved)
+{
+    Serial.println("ERROR: AT21CS01 SAVE FAILED");
+    server.send(
+        500,
+        "text/plain",
+        "Flash Saved But AT21CS01 Save Failed"
+    );
+    return;
+}
+
 Serial.println("===== DATABASE MATCH =====");
 Serial.println(device.id);
 Serial.println(device.probeName);
@@ -108,31 +121,106 @@ Serial.println("==========================");
 
 void handleRead()
 {
-    if(!loggedIn)
-{
-    server.send(401,
-                "text/plain",
-                "Unauthorized");
-
-    return;
-}
-
-    if(!isClientAllowed())
-{
-    server.send(403,
-                "text/plain",
-                "Maximum 1 Client Allowed");
-
-    return;
-}
-    if (!server.hasArg("id"))
+    if (!loggedIn)
     {
-        server.send(400, "text/plain", "Missing ID");
+        server.send(
+            401,
+            "text/plain",
+            "Unauthorized"
+        );
         return;
     }
-    device.id = server.arg("id");
-    readDevice(device);
 
+    if (!isClientAllowed())
+    {
+        server.send(
+            403,
+            "text/plain",
+            "Maximum 1 Client Allowed"
+        );
+        return;
+    }
+
+    if (!server.hasArg("id"))
+    {
+        server.send(
+            400,
+            "text/plain",
+            "Missing ID"
+        );
+        return;
+    }
+
+    // -------------------------------------------------
+    // Get selected Probe ID from Dashboard
+    // -------------------------------------------------
+    device.id = server.arg("id");
+
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("AT21CS01 PROBE READ");
+    Serial.println("======================================");
+
+    Serial.print("Requested Probe ID : ");
+    Serial.println(device.id);
+
+    // -------------------------------------------------
+    // READ PROBE FROM AT21CS01
+    // -------------------------------------------------
+    Serial.println("Resetting AT21CS01 bus...");
+eeprom.reset();
+delay(20);
+    bool eepromReadOK = readProbeFromAT21CS01(device);
+   
+
+    if (!eepromReadOK)
+    {
+        Serial.println("ERROR: AT21CS01 READ FAILED");
+        Serial.println("======================================");
+
+        server.send(
+            500,
+            "text/plain",
+            "AT21CS01 Probe Read Failed"
+        );
+
+        return;
+    }
+
+    // -------------------------------------------------
+    // Print data read from AT21CS01
+    // -------------------------------------------------
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("DATA READ FROM AT21CS01");
+    Serial.println("======================================");
+
+    Serial.print("ID              : ");
+    Serial.println(device.id);
+
+    Serial.print("Probe Name      : ");
+    Serial.println(device.probeName);
+
+    Serial.print("Pulse Strategy  : ");
+    Serial.println(device.pulseStrategy);
+
+    Serial.print("Expiry Year     : ");
+    Serial.println(device.expiryYear);
+
+    Serial.print("Total Cycle     : ");
+    Serial.println(device.totalCycle);
+
+    Serial.print("Total Pulse     : ");
+    Serial.println(device.totalPulse);
+
+    Serial.print("Use Time        : ");
+    Serial.println(device.useTime);
+
+    Serial.println("======================================");
+
+    // -------------------------------------------------
+    // Return data to Dashboard
+    // -------------------------------------------------
     String json = "{";
 
     json += "\"id\":\"" + device.id + "\",";
@@ -140,39 +228,16 @@ void handleRead()
     json += "\"useTime\":" + String(device.useTime) + ",";
     json += "\"probeName\":\"" + device.probeName + "\",";
     json += "\"pulseStrategy\":\"" + device.pulseStrategy + "\",";
-    json += "\"totalCycle\":\"" + String(device.totalCycle) + "\",";
-    json += "\"totalPulse\":\"" + String(device.totalPulse) + "\"";
+    json += "\"totalCycle\":" + String(device.totalCycle) + ",";
+    json += "\"totalPulse\":" + String(device.totalPulse);
+
     json += "}";
 
-    Serial.println();
-    Serial.println("======================================");
-    Serial.println("DATA READ FROM FLASH");
-    Serial.println("======================================");
-
-    Serial.print("ID          : ");
-    Serial.println(device.id);
-
-    Serial.print("Expiry      : ");
-    Serial.println(device.expiryYear);
-
-    Serial.print("Use Time    : ");
-    Serial.println(device.useTime);
-
-   Serial.print("Probe Name  : ");
-Serial.println(device.probeName);
-
-Serial.print("Pulse Strategy  : ");
-Serial.println(device.pulseStrategy);
-
-Serial.print("Total Cycle : ");
-Serial.println(device.totalCycle);
-
-Serial.print("Total Pulse : ");
-Serial.println(device.totalPulse);
-
-    Serial.println("======================================");
-
-    server.send(200, "application/json", json);
+    server.send(
+        200,
+        "application/json",
+        json
+    );
 }
 
 void handleLogin()

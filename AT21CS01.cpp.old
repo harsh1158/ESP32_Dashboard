@@ -1,0 +1,119 @@
+#include "AT21CS01.h"
+
+AT21CS01::AT21CS01(uint8_t pin)
+{
+    ioPin = pin;
+}
+
+bool AT21CS01::begin()
+{
+    releaseLine();
+    return true;
+}
+
+void AT21CS01::releaseLine()
+{
+    // Release SI/O so external 2.1k pull-up
+    // can bring the line HIGH.
+    pinMode(ioPin, INPUT);
+}
+
+void AT21CS01::pullLineLow()
+{
+    pinMode(ioPin, OUTPUT);
+    digitalWrite(ioPin, LOW);
+}
+
+bool AT21CS01::reset()
+{
+    // Bus must start HIGH/released
+    releaseLine();
+    delayMicroseconds(10);
+
+    // Reset pulse
+    pullLineLow();
+    delayMicroseconds(500);
+
+    // Release bus
+    releaseLine();
+
+    // Wait for EEPROM presence response
+    delayMicroseconds(20);
+
+    bool presence = (digitalRead(ioPin) == LOW);
+
+    delayMicroseconds(20);
+
+    return presence;
+}
+
+void AT21CS01::writeBit(bool bit)
+{
+    pullLineLow();
+
+    if (bit)
+    {
+        // Logic 1
+        delayMicroseconds(1);
+
+        releaseLine();
+        delayMicroseconds(14);
+    }
+    else
+    {
+        // Logic 0
+        delayMicroseconds(10);
+
+        releaseLine();
+        delayMicroseconds(5);
+    }
+}
+
+bool AT21CS01::readBit()
+{
+    // Start read slot
+    pullLineLow();
+    delayMicroseconds(1);
+
+    // Release line
+    releaseLine();
+
+    delayMicroseconds(1);
+
+    bool bit = digitalRead(ioPin);
+
+    delayMicroseconds(9);
+
+    return bit;
+}
+
+bool AT21CS01::writeByte(uint8_t value)
+{
+    // AT21CS01 sends data MSB first
+    for (int i = 7; i >= 0; i--)
+    {
+        bool bit = (value >> i) & 0x01;
+        writeBit(bit);
+    }
+
+    // EEPROM ACK
+    bool ack = !readBit();
+
+    return ack;
+}
+
+uint8_t AT21CS01::readByte()
+{
+    uint8_t value = 0;
+
+    // Read MSB first
+    for (int i = 7; i >= 0; i--)
+    {
+        if (readBit())
+        {
+            value |= (1 << i);
+        }
+    }
+
+    return value;
+}
