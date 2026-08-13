@@ -4,6 +4,8 @@
 *.map
 *.o
 *.a
+*.old
+*.before_at21
 
 .vscode/
 
