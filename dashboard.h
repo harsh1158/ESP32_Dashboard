@@ -607,38 +607,27 @@ submitButton.addEventListener("click", function()
 });
 
 //----------------------------------------------------
-// ID Change - Load Device Data
+// ID Change
 //----------------------------------------------------
 
 idDropdown.addEventListener("change", function()
 {
+    // Only select the probe.
+    // EEPROM will NOT be read here.
+
     let id = idDropdown.value;
-    if(id=="")
+
+    if(id == "")
     {
+        statusMessage.innerHTML = "Please Select ID";
+        statusMessage.style.color = "red";
         return;
     }
-    fetch("/read?id="+id)
-    .then(response=>response.json())
-    .then(data=>
-{
-    expiryYear.value = data.expiry;
-    useTime.value = data.useTime;
-
-    pulseStrategy.value = data.pulseStrategy; 
-    totalCycle.value = data.totalCycle;
-    totalPulse.value = data.totalPulse;
 
     statusMessage.innerHTML =
-        data.probeName + " Loaded";
+        "Probe " + id + " selected. Click Read.";
 
-    statusMessage.style.color = "green";
-})
-
-    .catch(error=>
-    {
-        statusMessage.innerHTML="Read Failed";
-        statusMessage.style.color="red";
-    });
+    statusMessage.style.color = "black";
 });
 
 //----------------------------------------------------
@@ -648,28 +637,52 @@ idDropdown.addEventListener("change", function()
 readButton.addEventListener("click", function()
 {
     let id = idDropdown.value;
-    if(id=="")
+
+    if(id == "")
     {
-        statusMessage.innerHTML="Please Select ID";
-        statusMessage.style.color="red";
+        statusMessage.innerHTML = "Please Select ID";
+        statusMessage.style.color = "red";
         return;
     }
-    fetch("/read?id="+id)
-    .then(response=>response.json())
-    .then(data=>
-{
-    expiryYear.value = data.expiry;
-    useTime.value = data.useTime;
-
-    pulseStrategy.value = data.pulseStrategy;
-    totalCycle.value = data.totalCycle;
-    totalPulse.value = data.totalPulse;
 
     statusMessage.innerHTML =
-        data.probeName + " Read Successfully";
+        "Reading Probe " + id + "...";
 
-    statusMessage.style.color = "green";
-});
+    statusMessage.style.color = "black";
+
+    fetch("/read?id=" + encodeURIComponent(id))
+    .then(response =>
+    {
+        if(!response.ok)
+        {
+            throw new Error("EEPROM read failed");
+        }
+
+        return response.json();
+    })
+    .then(data =>
+    {
+        expiryYear.value = data.expiry;
+        useTime.value = data.useTime;
+
+        pulseStrategy.value = data.pulseStrategy;
+        totalCycle.value = data.totalCycle;
+        totalPulse.value = data.totalPulse;
+
+        statusMessage.innerHTML =
+            data.probeName + " Read Successfully";
+
+        statusMessage.style.color = "green";
+    })
+    .catch(error =>
+    {
+        console.log(error);
+
+        statusMessage.innerHTML =
+            "Probe Read Failed";
+
+        statusMessage.style.color = "red";
+    });
 });
 
 saveLoginButton.addEventListener("click", function()

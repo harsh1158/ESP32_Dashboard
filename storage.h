@@ -80,10 +80,13 @@ void saveDevice(Device &device)
     );
 
     // Probe values
-    data.expiryYear = device.expiryYear;
-    data.totalCycle = device.totalCycle;
-    data.totalPulse = device.totalPulse;
-    data.useTime = device.useTime;
+   // Internal product settings
+// Expiry = 2 years
+// Use time = 24 hours
+data.expiryYear = 2;
+data.totalCycle = device.totalCycle;
+data.totalPulse = device.totalPulse;
+data.useTime = 24;
 
     // Internal thresholds
     data.startThreshold = 0;
@@ -111,8 +114,11 @@ bool saveProbeToAT21CS01(Device &device)
     uint8_t buffer[28];
 
     /*
-     * Find probe in the master database
+     * =================================================
+     * FIND PROBE IN MASTER DATABASE
+     * =================================================
      */
+
     const ProbeData *probe = nullptr;
 
     for (int i = 0; i < TOTAL_PROBES; i++)
@@ -134,20 +140,20 @@ bool saveProbeToAT21CS01(Device &device)
 
     /*
      * =================================================
-     * CONFIGURATION DATA - 0x10
+     * BUILD CONFIGURATION DATA
      * =================================================
      *
-     * smart.c layout:
+     * EEPROM 0x10 - 0x2B
      *
-     * 0-1   Probe ID
-     * 2-3   Pulse Count
-     * 4-5   Cycle Count
-     * 6-7   Start Threshold
-     * 8-9   End Threshold
-     * 10-13 End Threshold Time
-     * 14-17 Expiry Threshold Time
-     * 18-25 Creation Time
-     * 26-27 CRC
+     * 0-1    Probe ID
+     * 2-3    Pulse Count
+     * 4-5    Cycle Count
+     * 6-7    Start Threshold
+     * 8-9    End Threshold
+     * 10-13  End Time
+     * 14-17  Expiry Time
+     * 18-25  Creation Time
+     * 26-27  CRC
      */
 
     memset(buffer, 0, sizeof(buffer));
@@ -164,16 +170,19 @@ bool saveProbeToAT21CS01(Device &device)
         probe->totalCycle
     );
 
-    // Internal start threshold
-    put_u16(&buffer[6], 0);
+    // Start threshold
+    put_u16(
+        &buffer[6],
+        0
+    );
 
-    // Probe is considered complete at total pulse count
+    // End threshold
     put_u16(
         &buffer[8],
         probe->totalPulse
     );
 
-    // 900 seconds = 15 minutes
+    // End time = 900 seconds
     uint32_t endThresholdTime = 900;
 
     buffer[10] = endThresholdTime & 0xFF;
@@ -181,20 +190,26 @@ bool saveProbeToAT21CS01(Device &device)
     buffer[12] = (endThresholdTime >> 16) & 0xFF;
     buffer[13] = (endThresholdTime >> 24) & 0xFF;
 
-    // 3600 seconds = 1 hour
-    uint32_t expiryThresholdTime = 3600;
+    // Expiry time = 2 years
+// 2 × 365 × 24 × 60 × 60 seconds
+uint32_t expiryThresholdTime = 63072000UL;
 
     buffer[14] = expiryThresholdTime & 0xFF;
     buffer[15] = (expiryThresholdTime >> 8) & 0xFF;
     buffer[16] = (expiryThresholdTime >> 16) & 0xFF;
     buffer[17] = (expiryThresholdTime >> 24) & 0xFF;
 
-    // Creation time currently left as 0.
-    // RTC integration will be done later.
+    // Creation time = 0 for now
     for (int i = 18; i <= 25; i++)
     {
         buffer[i] = 0;
     }
+
+    /*
+     * =================================================
+     * CALCULATE CRC
+     * =================================================
+     */
 
     uint16_t crc =
         modbus_crc16(
@@ -202,7 +217,16 @@ bool saveProbeToAT21CS01(Device &device)
             CONFIG_LENGTH - 2
         );
 
-    put_u16(&buffer[26], crc);
+    put_u16(
+        &buffer[26],
+        crc
+    );
+
+    /*
+     * =================================================
+     * PRINT CONFIGURATION
+     * =================================================
+     */
 
     Serial.println();
     Serial.println("======================================");
@@ -240,20 +264,164 @@ bool saveProbeToAT21CS01(Device &device)
     Serial.println(crc, HEX);
 
     /*
-     * WRITE CONFIGURATION
+     * =================================================
+     * CONFIGURATION WRITE
+     * =================================================
+     *
+     * IMPORTANT:
+     *
+     * AT21CS01 page size = 8 bytes.
+     *
+     * Therefore 28 bytes MUST NOT be written
+     * in one transaction.
+     *
+     * We write:
+     *
+     * 0x10 - 0x17 = 8 bytes
+     * 0x18 - 0x1F = 8 bytes
+     * 0x20 - 0x27 = 8 bytes
+     * 0x28 - 0x2B = 4 bytes
      */
 
     Serial.println();
     Serial.println("Writing configuration to AT21CS01...");
 
+    // -----------------------------------------------
+    // CONFIG PAGE 1
+    // -----------------------------------------------
+
     eeprom.eepromWrite(
         DEVICE_ADDRESS,
-        CONFIG_ADDRESS,
-        buffer,
-        CONFIG_LENGTH
+        0x10,
+        &buffer[0],
+        8
     );
 
-    delay(20);
+    delay(10);
+
+    // -----------------------------------------------
+    // CONFIG PAGE 2
+    // -----------------------------------------------
+
+    eeprom.eepromWrite(
+        DEVICE_ADDRESS,
+        0x18,
+        &buffer[8],
+        8
+    );
+
+    delay(10);
+
+    // -----------------------------------------------
+    // CONFIG PAGE 3
+    // -----------------------------------------------
+
+    eeprom.eepromWrite(
+        DEVICE_ADDRESS,
+        0x20,
+        &buffer[16],
+        8
+    );
+
+    delay(10);
+
+    // -----------------------------------------------
+    // CONFIG PAGE 4
+    // -----------------------------------------------
+
+    eeprom.eepromWrite(
+        DEVICE_ADDRESS,
+        0x28,
+        &buffer[24],
+        4
+    );
+
+    delay(10);
+    // =================================================
+// DEBUG: READ CONFIGURATION BACK AFTER SAVE
+// =================================================
+
+uint8_t verifyBuffer[28];
+
+memset(verifyBuffer, 0, sizeof(verifyBuffer));
+
+Serial.println();
+Serial.println("======================================");
+Serial.println("VERIFY CONFIGURATION AFTER EEPROM WRITE");
+Serial.println("======================================");
+
+noInterrupts();
+
+eeprom.randomRead(
+    DEVICE_ADDRESS,
+    0x10,
+    &verifyBuffer[0],
+    8
+);
+
+eeprom.randomRead(
+    DEVICE_ADDRESS,
+    0x18,
+    &verifyBuffer[8],
+    8
+);
+
+eeprom.randomRead(
+    DEVICE_ADDRESS,
+    0x20,
+    &verifyBuffer[16],
+    8
+);
+
+eeprom.randomRead(
+    DEVICE_ADDRESS,
+    0x28,
+    &verifyBuffer[24],
+    4
+);
+
+interrupts();
+
+delayMicroseconds(1000);
+
+Serial.println();
+Serial.println("EEPROM DATA AFTER SAVE:");
+
+for (int i = 0; i < 28; i++)
+{
+    Serial.printf(
+        "ADDR 0x%02X = 0x%02X\n",
+        0x10 + i,
+        verifyBuffer[i]
+    );
+}
+
+uint16_t verifyStoredCRC =
+    get_u16(&verifyBuffer[26]);
+
+uint16_t verifyCalculatedCRC =
+    modbus_crc16(verifyBuffer, 26);
+
+Serial.printf(
+    "Stored CRC     : 0x%04X\n",
+    verifyStoredCRC
+);
+
+Serial.printf(
+    "Calculated CRC : 0x%04X\n",
+    verifyCalculatedCRC
+);
+
+if (verifyStoredCRC == verifyCalculatedCRC)
+{
+    Serial.println("SAVE VERIFY CRC : PASS");
+}
+else
+{
+    Serial.println("SAVE VERIFY CRC : FAIL");
+}
+
+Serial.println("======================================");
 
     /*
      * =================================================
@@ -263,7 +431,10 @@ bool saveProbeToAT21CS01(Device &device)
 
     memset(buffer, 0, sizeof(buffer));
 
-    put_u16(&buffer[0], probeID);
+    put_u16(
+        &buffer[0],
+        probeID
+    );
 
     crc =
         modbus_crc16(
@@ -271,16 +442,30 @@ bool saveProbeToAT21CS01(Device &device)
             EVENT_LENGTH - 2
         );
 
-    put_u16(&buffer[10], crc);
-
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        DETECT_ADDRESS,
-        buffer,
-        EVENT_LENGTH
+    put_u16(
+        &buffer[10],
+        crc
     );
 
-    delay(20);
+    // 8-byte page
+    eeprom.eepromWrite(
+        DEVICE_ADDRESS,
+        0x30,
+        &buffer[0],
+        8
+    );
+
+    delay(10);
+
+    // Remaining 4 bytes
+    eeprom.eepromWrite(
+        DEVICE_ADDRESS,
+        0x38,
+        &buffer[8],
+        4
+    );
+
+    delay(10);
 
     /*
      * =================================================
@@ -290,7 +475,10 @@ bool saveProbeToAT21CS01(Device &device)
 
     memset(buffer, 0, sizeof(buffer));
 
-    put_u16(&buffer[0], probeID);
+    put_u16(
+        &buffer[0],
+        probeID
+    );
 
     crc =
         modbus_crc16(
@@ -298,16 +486,30 @@ bool saveProbeToAT21CS01(Device &device)
             EVENT_LENGTH - 2
         );
 
-    put_u16(&buffer[10], crc);
-
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        START_ADDRESS,
-        buffer,
-        EVENT_LENGTH
+    put_u16(
+        &buffer[10],
+        crc
     );
 
-    delay(20);
+    // 8-byte page
+    eeprom.eepromWrite(
+        DEVICE_ADDRESS,
+        0x40,
+        &buffer[0],
+        8
+    );
+
+    delay(10);
+
+    // Remaining 4 bytes
+    eeprom.eepromWrite(
+        DEVICE_ADDRESS,
+        0x48,
+        &buffer[8],
+        4
+    );
+
+    delay(10);
 
     /*
      * =================================================
@@ -317,13 +519,22 @@ bool saveProbeToAT21CS01(Device &device)
 
     memset(buffer, 0, sizeof(buffer));
 
-    put_u16(&buffer[0], probeID);
+    put_u16(
+        &buffer[0],
+        probeID
+    );
 
     // Initial pulse count
-    put_u16(&buffer[2], 0);
+    put_u16(
+        &buffer[2],
+        0
+    );
 
     // Initial status
-    put_u16(&buffer[4], 0);
+    put_u16(
+        &buffer[4],
+        0
+    );
 
     crc =
         modbus_crc16(
@@ -331,16 +542,25 @@ bool saveProbeToAT21CS01(Device &device)
             RUNTIME_LENGTH - 2
         );
 
-    put_u16(&buffer[6], crc);
+    put_u16(
+        &buffer[6],
+        crc
+    );
 
     eeprom.eepromWrite(
         DEVICE_ADDRESS,
         RUNTIME_ADDRESS,
         buffer,
-        RUNTIME_LENGTH
+        8
     );
 
-    delay(20);
+    delay(10);
+
+    /*
+     * =================================================
+     * COMPLETE
+     * =================================================
+     */
 
     Serial.println("AT21CS01 PROBE SAVE COMPLETED");
     Serial.println("======================================");
@@ -388,12 +608,10 @@ bool readProbeFromAT21CS01(Device &device)
 
     noInterrupts();
 
-    eeprom.randomRead(
-        0xA0,
-        0x10,
-        buffer,
-        28
-    );
+    eeprom.randomRead(0xA0, 0x10, &buffer[0], 8);
+    eeprom.randomRead(0xA0, 0x18, &buffer[8], 8);
+    eeprom.randomRead(0xA0, 0x20, &buffer[16], 8);
+    eeprom.randomRead(0xA0, 0x28, &buffer[24], 4);
 
     interrupts();
 
@@ -547,10 +765,9 @@ bool readProbeFromAT21CS01(Device &device)
     device.totalPulse = pulseCount;
     device.totalCycle = cycleCount;
 
-    // These are currently maintained by the
-    // Flash/database layer.
-    device.useTime = 6;
-    device.expiryYear = 1;
+    // Internal product settings
+device.useTime = 24;
+device.expiryYear = 2;
 
     // =================================================
     // DEBUG OUTPUT
@@ -619,27 +836,22 @@ void initializeDatabase()
         Serial.println("Flash Database Already Exists");
         return;
     }
-
     Serial.println("Creating Flash Database...");
-
     Device temp;
 
     for (int i = 0; i < TOTAL_PROBES; i++)
     {
         temp.id = probeDatabase[i].id;
-temp.probeName = probeDatabase[i].probeName;
-temp.pulseStrategy = probeDatabase[i].pulseStrategy;
+        temp.probeName = probeDatabase[i].probeName;
+        temp.pulseStrategy = probeDatabase[i].pulseStrategy;
 
-temp.expiryYear = 1;
-temp.totalCycle = probeDatabase[i].totalCycle;
-temp.totalPulse = probeDatabase[i].totalPulse;
-temp.useTime = 6;
-
+        temp.expiryYear = 2;
+        temp.totalCycle = probeDatabase[i].totalCycle;
+        temp.totalPulse = probeDatabase[i].totalPulse;
+        temp.useTime = 24;
         saveDevice(temp);
     }
-
     saveString("database_init", "1");
-
     Serial.println("Flash Database Created Successfully");
 }
 

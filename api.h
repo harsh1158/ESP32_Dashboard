@@ -55,8 +55,12 @@ void handleSave()
     }
 
     device.id = server.arg("id");
-device.expiryYear = server.arg("expiry").toInt();
-device.useTime = server.arg("useTime").toInt();
+// Dashboard dropdown values are ignored internally.
+// Product configuration is fixed to:
+// Expiry = 2 years
+// Use Time = 24 hours
+device.expiryYear = 2;
+device.useTime = 24;
 
 for (int i = 0; i < TOTAL_PROBES; i++)
 {
@@ -167,11 +171,30 @@ void handleRead()
     // -------------------------------------------------
     // READ PROBE FROM AT21CS01
     // -------------------------------------------------
-    Serial.println("Resetting AT21CS01 bus...");
+    Serial.println();
+Serial.println("========== DEBUG FIRST READ ==========");
+
+Serial.print("Requested ID : ");
+Serial.println(device.id);
+
+Serial.println("STEP 1: Before EEPROM reset");
+
 eeprom.reset();
+
+Serial.println("STEP 2: EEPROM reset completed");
+
 delay(20);
-    bool eepromReadOK = readProbeFromAT21CS01(device);
-   
+
+Serial.println("STEP 3: Starting readProbeFromAT21CS01()");
+
+bool eepromReadOK = readProbeFromAT21CS01(device);
+
+Serial.println("STEP 4: readProbeFromAT21CS01() returned");
+
+Serial.print("READ RESULT : ");
+Serial.println(eepromReadOK ? "TRUE" : "FALSE");
+
+Serial.println("======================================");
 
     if (!eepromReadOK)
     {

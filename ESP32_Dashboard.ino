@@ -29,7 +29,7 @@ void testAT21CS01()
     Serial.println("==============================");
 
     uint8_t deviceAddress = 0xA0;
-    uint8_t startAddress = 0x10;
+    uint8_t startAddress = 0x70;
 
     uint8_t writeData[] = {
         0xA5,
@@ -97,7 +97,235 @@ void testAT21CS01()
         Serial.println("==============================");
     }
 }
+void testDashboardStyleEEPROMRead()
+{
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("DASHBOARD STYLE EEPROM READ TEST");
+    Serial.println("======================================");
 
+    uint8_t buffer[28];
+
+    Serial.println("Resetting AT21CS01...");
+
+    eeprom.reset();
+
+    delayMicroseconds(100);
+
+    Serial.println("Reading 28 bytes from address 0x10...");
+
+    eeprom.randomRead(
+        0xA0,
+        0x10,
+        buffer,
+        28
+    );
+
+    Serial.println();
+    Serial.println("RAW DATA:");
+
+    for (int i = 0; i < 28; i++)
+    {
+        Serial.printf(
+            "ADDR 0x%02X = 0x%02X\n",
+            0x10 + i,
+            buffer[i]
+        );
+    }
+
+    Serial.println("======================================");
+}
+
+void testAllProbeDataRead()
+{
+    const uint8_t DEVICE_ADDRESS = 0xA0;
+
+    uint8_t buffer[12];
+
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("AT21CS01 ALL PROBE DATA READ TEST");
+    Serial.println("======================================");
+
+
+    // =================================================
+    // DETECTION DATA
+    // =================================================
+
+    Serial.println();
+    Serial.println("----- DETECTION DATA 0x30 -----");
+
+    eeprom.reset();
+    delayMicroseconds(1000);
+
+    noInterrupts();
+
+    eeprom.randomRead(
+        DEVICE_ADDRESS,
+        0x30,
+        &buffer[0],
+        8
+    );
+
+    eeprom.randomRead(
+        DEVICE_ADDRESS,
+        0x38,
+        &buffer[8],
+        4
+    );
+
+    interrupts();
+
+    for (int i = 0; i < 12; i++)
+    {
+        Serial.printf(
+            "ADDR 0x%02X = 0x%02X\n",
+            0x30 + i,
+            buffer[i]
+        );
+    }
+
+    uint16_t storedCRC =
+        ((uint16_t)buffer[10]) |
+        ((uint16_t)buffer[11] << 8);
+
+    uint16_t calculatedCRC =
+        modbus_crc16(buffer, 10);
+
+    Serial.printf(
+        "Stored CRC     : 0x%04X\n",
+        storedCRC
+    );
+
+    Serial.printf(
+        "Calculated CRC : 0x%04X\n",
+        calculatedCRC
+    );
+
+    if (storedCRC == calculatedCRC)
+        Serial.println("DETECTION DATA CRC : PASS");
+    else
+        Serial.println("DETECTION DATA CRC : FAIL");
+
+
+    // =================================================
+    // START DETECTION DATA
+    // =================================================
+
+    Serial.println();
+    Serial.println("----- START DETECTION 0x40 -----");
+
+    eeprom.reset();
+    delayMicroseconds(1000);
+
+    noInterrupts();
+
+    eeprom.randomRead(
+        DEVICE_ADDRESS,
+        0x40,
+        &buffer[0],
+        8
+    );
+
+    eeprom.randomRead(
+        DEVICE_ADDRESS,
+        0x48,
+        &buffer[8],
+        4
+    );
+
+    interrupts();
+
+    for (int i = 0; i < 12; i++)
+    {
+        Serial.printf(
+            "ADDR 0x%02X = 0x%02X\n",
+            0x40 + i,
+            buffer[i]
+        );
+    }
+
+    storedCRC =
+        ((uint16_t)buffer[10]) |
+        ((uint16_t)buffer[11] << 8);
+
+    calculatedCRC =
+        modbus_crc16(buffer, 10);
+
+    Serial.printf(
+        "Stored CRC     : 0x%04X\n",
+        storedCRC
+    );
+
+    Serial.printf(
+        "Calculated CRC : 0x%04X\n",
+        calculatedCRC
+    );
+
+    if (storedCRC == calculatedCRC)
+        Serial.println("START DETECTION CRC : PASS");
+    else
+        Serial.println("START DETECTION CRC : FAIL");
+
+
+    // =================================================
+    // RUNTIME DATA
+    // =================================================
+
+    Serial.println();
+    Serial.println("----- RUNTIME DATA 0x50 -----");
+
+    eeprom.reset();
+    delayMicroseconds(1000);
+
+    noInterrupts();
+
+    eeprom.randomRead(
+        DEVICE_ADDRESS,
+        0x50,
+        &buffer[0],
+        8
+    );
+
+    interrupts();
+
+    for (int i = 0; i < 8; i++)
+    {
+        Serial.printf(
+            "ADDR 0x%02X = 0x%02X\n",
+            0x50 + i,
+            buffer[i]
+        );
+    }
+
+    storedCRC =
+        ((uint16_t)buffer[6]) |
+        ((uint16_t)buffer[7] << 8);
+
+    calculatedCRC =
+        modbus_crc16(buffer, 6);
+
+    Serial.printf(
+        "Stored CRC     : 0x%04X\n",
+        storedCRC
+    );
+
+    Serial.printf(
+        "Calculated CRC : 0x%04X\n",
+        calculatedCRC
+    );
+
+    if (storedCRC == calculatedCRC)
+        Serial.println("RUNTIME DATA CRC : PASS");
+    else
+        Serial.println("RUNTIME DATA CRC : FAIL");
+
+
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("ALL PROBE DATA READ TEST COMPLETE");
+    Serial.println("======================================");
+}
 void setup()
 {
     Serial.begin(115200);
@@ -128,14 +356,39 @@ void setup()
     }
 
     testAT21CS01();
-    testEEPROMDeviceStorage();
+    testDashboardStyleEEPROMRead();
+    //testEEPROMDeviceStorage();
     //testRealProbeStorage();
-    testSmartProbeConfiguration();
-    testSmartProbeDetectionData();
-    testSmartProbeStartDetectionData();
-    testSmartProbeRuntimeData();
-    testReadProbeFromAT21CS01();
+    //testSmartProbeConfiguration();
+    //testSmartProbeDetectionData();
+    //testSmartProbeStartDetectionData();
+    //testSmartProbeRuntimeData();
+    //testReadProbeFromAT21CS01();
     testProbe1CompleteInitialization();
+    //testAllProbeDataRead();
+    
+    Serial.println();
+Serial.println("======================================");
+Serial.println("AT21CS01 BOOT READ TEST");
+Serial.println("======================================");
+
+delay(1000);
+
+eeprom.reset();
+
+delay(100);
+
+Device bootTestDevice;
+bootTestDevice.id = "1";
+
+Serial.println("Reading Probe-1 immediately after boot...");
+
+bool bootReadOK = readProbeFromAT21CS01(bootTestDevice);
+
+Serial.print("BOOT READ RESULT : ");
+Serial.println(bootReadOK ? "TRUE" : "FALSE");
+
+Serial.println("======================================");
 
     Serial.println("******** SETUP START ********");
     Serial.println("Before prefs.begin()");
@@ -1341,13 +1594,22 @@ void testProbe1CompleteInitialization()
     put_u16(&buffer[10], detectionCRC);
 
     eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        DETECT_ADDRESS,
-        buffer,
-        EVENT_LENGTH
-    );
+    DEVICE_ADDRESS,
+    0x30,
+    &buffer[0],
+    8
+);
 
-    delay(20);
+delay(10);
+
+eeprom.eepromWrite(
+    DEVICE_ADDRESS,
+    0x38,
+    &buffer[8],
+    4
+);
+
+delay(10);
 
     Serial.println("DETECTION DATA INITIALIZED");
 
@@ -1365,13 +1627,22 @@ void testProbe1CompleteInitialization()
     put_u16(&buffer[10], startCRC);
 
     eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        START_ADDRESS,
-        buffer,
-        EVENT_LENGTH
-    );
+    DEVICE_ADDRESS,
+    0x40,
+    &buffer[0],
+    8
+);
 
-    delay(20);
+delay(10);
+
+eeprom.eepromWrite(
+    DEVICE_ADDRESS,
+    0x48,
+    &buffer[8],
+    4
+);
+
+delay(10);
 
     Serial.println("START DETECTION DATA INITIALIZED");
 
