@@ -490,7 +490,10 @@ Ready
 </div>
 
 <script>
+let lastProbeConnectionState = null;
+setInterval(checkProbeStatus, 1000);
 
+checkProbeStatus();
 //----------------------------------------------------
 // Controls
 //----------------------------------------------------
@@ -506,6 +509,7 @@ const submitButton = document.getElementById("submitBtn");
 const readButton = document.getElementById("readBtn");
 const logoutButton = document.getElementById("logoutBtn");
 const statusMessage = document.getElementById("statusMessage");
+
 const currentPassword =
 document.getElementById("currentPassword");
 
@@ -541,6 +545,91 @@ document.getElementById("saveLoginButton");
 
 const cancelLoginButton =
 document.getElementById("cancelLoginButton");
+
+//----------------------------------------------------
+// Probe Connection Status
+//----------------------------------------------------
+
+function checkProbeStatus()
+{
+    fetch("/probeStatus")
+    .then(response =>
+    {
+        if(!response.ok)
+        {
+            throw new Error("Probe status failed");
+        }
+
+        return response.json();
+    })
+    .then(data =>
+    {
+        // ---------------------------------------------
+        // Probe CONNECTED
+        // ---------------------------------------------
+        if(data.connected)
+        {
+            // Only update Status when connection
+            // actually changes from disconnected -> connected
+            if(lastProbeConnectionState !== true)
+            {
+                statusMessage.innerHTML = "Probe Connected";
+                statusMessage.style.color = "green";
+            }
+            lastProbeConnectionState = true;
+
+            // Enable dashboard controls
+            idDropdown.disabled = false;
+            expiryYear.disabled = false;
+            useTime.disabled = false;
+            submitButton.disabled = false;
+            readButton.disabled = false;
+        } else
+        {
+            // Only update Status when connection
+            // actually changes from connected -> disconnected
+            if(lastProbeConnectionState !== false)
+            {
+                statusMessage.innerHTML = "Probe Disconnected";
+                statusMessage.style.color = "red";
+            }
+            lastProbeConnectionState = false;
+
+            // Disable dashboard controls
+            idDropdown.disabled = true;
+            expiryYear.disabled = true;
+            useTime.disabled = true;
+            submitButton.disabled = true;
+            readButton.disabled = true;
+        }
+    })
+    .catch(error =>
+    {
+        console.log(error);
+        if(lastProbeConnectionState !== false)
+        {
+            statusMessage.innerHTML = "Probe Disconnected";
+            statusMessage.style.color = "red";
+        }
+        lastProbeConnectionState = false;
+
+        idDropdown.disabled = true;
+        expiryYear.disabled = true;
+        useTime.disabled = true;
+        submitButton.disabled = true;
+        readButton.disabled = true;
+    });
+}
+
+//----------------------------------------------------
+// Status Message
+//----------------------------------------------------
+
+function setStatusMessage(message, color)
+{
+    statusMessage.innerHTML = message;
+    statusMessage.style.color = color;
+}
 
 //----------------------------------------------------
 // Today's Date
@@ -616,10 +705,10 @@ submitButton.addEventListener("click", function()
     expiryYear.value = data.expiry;
     useTime.value = data.useTime;
 
-    statusMessage.innerHTML =
-        data.probeName + " Saved Successfully";
-
-    statusMessage.style.color = "green";
+    setStatusMessage(
+    data.probeName + " Saved Successfully",
+    "green"
+    );
 })
 .catch(error =>
 {
@@ -650,65 +739,115 @@ idDropdown.addEventListener("change", function()
         return;
     }
 
-    statusMessage.innerHTML =
-        "Probe " + id + " selected. Click Submit.";
-
-    statusMessage.style.color = "black";
+        setStatusMessage(
+        "Probe " + id + " selected. Click Submit.",
+        "black"
+        );
 });
 
 //----------------------------------------------------
-// Read
+// Read 
 //----------------------------------------------------
 
-readButton.addEventListener("click", function()
+readButton.addEventListener("click", async function()
 {
     let id = idDropdown.value;
 
-    if(id == "")
+    /*if(id == "")
     {
         statusMessage.innerHTML = "Please Select ID";
         statusMessage.style.color = "red";
         return;
-    }
+    }*/
+
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 150;
 
     statusMessage.innerHTML =
         "Reading Probe " + id + "...";
 
     statusMessage.style.color = "black";
 
-    fetch("/read?id=" + encodeURIComponent(id))
-    .then(response =>
+    // Prevent repeated manual clicks while retrying
+    readButton.disabled = true;
+    submitButton.disabled = true;
+
+    for(let attempt = 1; attempt <= MAX_RETRIES; attempt++)
     {
-        if(!response.ok)
+        try
         {
-            throw new Error("EEPROM read failed");
+            console.log(
+                "EEPROM READ attempt " +
+                attempt +
+                "/" +
+                MAX_RETRIES
+            );
+            const response = await fetch(
+                "/read?id=" + encodeURIComponent(id)
+            );
+
+            if(!response.ok)
+            {
+                throw new Error("EEPROM read failed");
+            }
+
+            const data = await response.json();
+
+            idDropdown.value = data.id;
+            expiryYear.value = data.expiry;
+            useTime.value = data.useTime;
+
+            pulseStrategy.value = data.pulseStrategy;
+            totalCycle.value = data.totalCycle;
+            totalPulse.value = data.totalPulse;
+
+            setStatusMessage(
+                data.probeName + " Read Successfully",
+                "green"
+            );
+
+            console.log(
+                "EEPROM READ SUCCESS on attempt " +
+                attempt
+            );
+
+            // Stop retrying
+            readButton.disabled = false;
+            submitButton.disabled = false;
+
+            return;
         }
+        catch(error)
+        {
+            console.log(
+                "EEPROM READ FAILED - Attempt " +
+                attempt
+            );
 
-        return response.json();
-    })
-    .then(data =>
-    {
-        expiryYear.value = data.expiry;
-        useTime.value = data.useTime;
+            if(attempt < MAX_RETRIES)
+            {
+                statusMessage.innerHTML =
+                    "Read failed. Retrying (" +
+                    (attempt + 1) +
+                    "/" +
+                    MAX_RETRIES +
+                    ")...";
 
-        pulseStrategy.value = data.pulseStrategy;
-        totalCycle.value = data.totalCycle;
-        totalPulse.value = data.totalPulse;
+                statusMessage.style.color = "orange";
 
-        statusMessage.innerHTML =
-            data.probeName + " Read Successfully";
+                await new Promise(resolve =>
+                    setTimeout(resolve, RETRY_DELAY)
+                );
+            }
+        }
+    }
+    statusMessage.innerHTML =
+        "Probe Read Failed";
 
-        statusMessage.style.color = "green";
-    })
-    .catch(error =>
-    {
-        console.log(error);
+    statusMessage.style.color = "red";
 
-        statusMessage.innerHTML =
-            "Probe Read Failed";
-
-        statusMessage.style.color = "red";
-    });
+    readButton.disabled = false;
+    submitButton.disabled = false;
 });
 
 saveLoginButton.addEventListener("click", function()

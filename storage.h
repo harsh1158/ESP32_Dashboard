@@ -98,8 +98,9 @@ data.useTime = 24;
     saveStruct(device.id, data);
 }
 
-bool saveProbeToAT21CS01(Device &device)
+bool saveProbeToAT21CS01(const char *c_probeId)
 {
+    uint16_t probe_id = atoi(c_probeId);
     const uint8_t DEVICE_ADDRESS = 0xA0;
 
     const uint8_t CONFIG_ADDRESS  = 0x10;
@@ -120,11 +121,14 @@ bool saveProbeToAT21CS01(Device &device)
      */
 
     const ProbeData *probe = nullptr;
-
+    Serial.println("Compare Probe Id");
+    Serial.println(c_probeId);
     for (int i = 0; i < TOTAL_PROBES; i++)
     {
-        if (device.id == probeDatabase[i].id)
+        Serial.println(probeDatabase[i].id);
+        if (atoi(c_probeId) == atoi(probeDatabase[i].id))
         {
+            Serial.println("Probe Found");
             probe = &probeDatabase[i];
             break;
         }
@@ -135,8 +139,6 @@ bool saveProbeToAT21CS01(Device &device)
         Serial.println("ERROR: Probe not found in database");
         return false;
     }
-
-    uint16_t probeID = device.id.toInt();
 
     /*
      * =================================================
@@ -158,47 +160,14 @@ bool saveProbeToAT21CS01(Device &device)
 
     memset(buffer, 0, sizeof(buffer));
 
-    put_u16(&buffer[0], probeID);
-
-    put_u16(
-        &buffer[2],
-        probe->totalPulse
-    );
-
-    put_u16(
-        &buffer[4],
-        probe->totalCycle
-    );
-
-    // Start threshold
-    put_u16(
-        &buffer[6],
-        0
-    );
-
-    // End threshold
-    put_u16(
-        &buffer[8],
-        probe->totalPulse
-    );
-
-    // End time = 900 seconds
-    uint32_t endThresholdTime = 900;
-
-    buffer[10] = endThresholdTime & 0xFF;
-    buffer[11] = (endThresholdTime >> 8) & 0xFF;
-    buffer[12] = (endThresholdTime >> 16) & 0xFF;
-    buffer[13] = (endThresholdTime >> 24) & 0xFF;
-
-    // Expiry time = 2 years
-// 2 × 365 × 24 × 60 × 60 seconds
-uint32_t expiryThresholdTime = 63072000UL;
-
-    buffer[14] = expiryThresholdTime & 0xFF;
-    buffer[15] = (expiryThresholdTime >> 8) & 0xFF;
-    buffer[16] = (expiryThresholdTime >> 16) & 0xFF;
-    buffer[17] = (expiryThresholdTime >> 24) & 0xFF;
-
+    put_u16(&buffer[0], probe_id);
+    put_u16(&buffer[2], probe->totalPulse);
+    put_u16(&buffer[4], probe->totalCycle);
+    put_u16(&buffer[6], 0);                 // Start threshold
+    put_u16(&buffer[8], probe->totalPulse); // End threshold
+    put_u32(&buffer[10], 900);              // endThresholdTime = 900 seconds
+    put_u32(&buffer[14], 63072000UL);       // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
+    
     // Creation time = 0 for now
     for (int i = 18; i <= 25; i++)
     {
@@ -211,16 +180,8 @@ uint32_t expiryThresholdTime = 63072000UL;
      * =================================================
      */
 
-    uint16_t crc =
-        modbus_crc16(
-            buffer,
-            CONFIG_LENGTH - 2
-        );
-
-    put_u16(
-        &buffer[26],
-        crc
-    );
+    uint16_t crc = modbus_crc16(buffer, CONFIG_LENGTH - 2);
+    put_u16(&buffer[26], crc);
 
     /*
      * =================================================
@@ -234,7 +195,7 @@ uint32_t expiryThresholdTime = 63072000UL;
     Serial.println("======================================");
 
     Serial.print("Probe ID          : ");
-    Serial.println(probeID);
+    Serial.println(probe_id);
 
     Serial.print("Probe Name        : ");
     Serial.println(probe->probeName);
@@ -255,10 +216,10 @@ uint32_t expiryThresholdTime = 63072000UL;
     Serial.println(probe->totalPulse);
 
     Serial.print("End Time          : ");
-    Serial.println(endThresholdTime);
+    Serial.println(900);
 
     Serial.print("Expiry Time       : ");
-    Serial.println(expiryThresholdTime);
+    Serial.println(63072000UL);
 
     Serial.print("CRC               : 0x");
     Serial.println(crc, HEX);
@@ -289,139 +250,81 @@ uint32_t expiryThresholdTime = 63072000UL;
     // -----------------------------------------------
     // CONFIG PAGE 1
     // -----------------------------------------------
-
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        0x10,
-        &buffer[0],
-        8
-    );
-
+    eeprom.eepromWrite(DEVICE_ADDRESS, 0x10, &buffer[0], 8);
     delay(10);
 
     // -----------------------------------------------
     // CONFIG PAGE 2
     // -----------------------------------------------
-
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        0x18,
-        &buffer[8],
-        8
-    );
-
+    eeprom.eepromWrite(DEVICE_ADDRESS, 0x18, &buffer[8], 8);
     delay(10);
 
     // -----------------------------------------------
     // CONFIG PAGE 3
     // -----------------------------------------------
-
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        0x20,
-        &buffer[16],
-        8
-    );
-
+    eeprom.eepromWrite(DEVICE_ADDRESS, 0x20, &buffer[16], 8);
     delay(10);
 
     // -----------------------------------------------
     // CONFIG PAGE 4
     // -----------------------------------------------
+    eeprom.eepromWrite(DEVICE_ADDRESS, 0x28, &buffer[24], 4);
+    delay(10);
 
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        0x28,
-        &buffer[24],
-        4
-    );
+    Serial.println();
+    Serial.println("EEPROM DATA Writing :");
+    for (int i = 0; i < 28; i++)
+    {
+        Serial.printf("ADDR 0x%02X = 0x%02X\n", 0x10 + i, buffer[i]);
+    }
+
+    // =================================================
+    // DEBUG: READ CONFIGURATION BACK AFTER SAVE
+    // =================================================
+    delay(1000);
+
+    uint8_t verifyBuffer[28];
+    memset(verifyBuffer, 0, sizeof(verifyBuffer));
+
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("VERIFY CONFIGURATION AFTER EEPROM WRITE");
+    Serial.println("======================================");
+
+    noInterrupts();
+
+    eeprom.randomRead(DEVICE_ADDRESS, 0x10, &verifyBuffer[0], 8);
+    eeprom.randomRead(DEVICE_ADDRESS, 0x18, &verifyBuffer[8], 8);
+    eeprom.randomRead(DEVICE_ADDRESS, 0x20, &verifyBuffer[16], 8);
+    eeprom.randomRead(DEVICE_ADDRESS, 0x28, &verifyBuffer[24], 4);
+    interrupts();
 
     delay(10);
-    // =================================================
-// DEBUG: READ CONFIGURATION BACK AFTER SAVE
-// =================================================
 
-uint8_t verifyBuffer[28];
+    Serial.println();
+    Serial.println("EEPROM DATA READ :");
 
-memset(verifyBuffer, 0, sizeof(verifyBuffer));
+    for (int i = 0; i < 28; i++)
+    {
+        Serial.printf("ADDR 0x%02X = 0x%02X\n", 0x10 + i, verifyBuffer[i]);
+    }
 
-Serial.println();
-Serial.println("======================================");
-Serial.println("VERIFY CONFIGURATION AFTER EEPROM WRITE");
-Serial.println("======================================");
+    uint16_t verifyStoredCRC = get_u16(&verifyBuffer[26]);
+    uint16_t verifyCalculatedCRC = modbus_crc16(verifyBuffer, 26);
 
-noInterrupts();
+    Serial.printf("Stored CRC     : 0x%04X\n", verifyStoredCRC);
+    Serial.printf("Calculated CRC : 0x%04X\n", verifyCalculatedCRC);
 
-eeprom.randomRead(
-    DEVICE_ADDRESS,
-    0x10,
-    &verifyBuffer[0],
-    8
-);
+    if (verifyStoredCRC == verifyCalculatedCRC)
+    {
+        Serial.println("SAVE VERIFY CRC : PASS");
+    }
+    else
+    {
+        Serial.println("SAVE VERIFY CRC : FAIL");
+    }
 
-eeprom.randomRead(
-    DEVICE_ADDRESS,
-    0x18,
-    &verifyBuffer[8],
-    8
-);
-
-eeprom.randomRead(
-    DEVICE_ADDRESS,
-    0x20,
-    &verifyBuffer[16],
-    8
-);
-
-eeprom.randomRead(
-    DEVICE_ADDRESS,
-    0x28,
-    &verifyBuffer[24],
-    4
-);
-
-interrupts();
-
-delayMicroseconds(1000);
-
-Serial.println();
-Serial.println("EEPROM DATA AFTER SAVE:");
-
-for (int i = 0; i < 28; i++)
-{
-    Serial.printf(
-        "ADDR 0x%02X = 0x%02X\n",
-        0x10 + i,
-        verifyBuffer[i]
-    );
-}
-
-uint16_t verifyStoredCRC =
-    get_u16(&verifyBuffer[26]);
-
-uint16_t verifyCalculatedCRC =
-    modbus_crc16(verifyBuffer, 26);
-
-Serial.printf(
-    "Stored CRC     : 0x%04X\n",
-    verifyStoredCRC
-);
-
-Serial.printf(
-    "Calculated CRC : 0x%04X\n",
-    verifyCalculatedCRC
-);
-
-if (verifyStoredCRC == verifyCalculatedCRC)
-{
-    Serial.println("SAVE VERIFY CRC : PASS");
-}
-else
-{
-    Serial.println("SAVE VERIFY CRC : FAIL");
-}
-
-Serial.println("======================================");
+    Serial.println("======================================");
 
     /*
      * =================================================
@@ -431,40 +334,16 @@ Serial.println("======================================");
 
     memset(buffer, 0, sizeof(buffer));
 
-    put_u16(
-        &buffer[0],
-        probeID
-    );
-
-    crc =
-        modbus_crc16(
-            buffer,
-            EVENT_LENGTH - 2
-        );
-
-    put_u16(
-        &buffer[10],
-        crc
-    );
+    put_u16(&buffer[0], probe_id);
+    crc = modbus_crc16(buffer, EVENT_LENGTH - 2);
+    put_u16(&buffer[10], crc);
 
     // 8-byte page
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        0x30,
-        &buffer[0],
-        8
-    );
-
+    eeprom.eepromWrite(DEVICE_ADDRESS, 0x30, &buffer[0], 8);
     delay(10);
 
     // Remaining 4 bytes
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        0x38,
-        &buffer[8],
-        4
-    );
-
+    eeprom.eepromWrite(DEVICE_ADDRESS, 0x38, &buffer[8], 4);
     delay(10);
 
     /*
@@ -474,41 +353,16 @@ Serial.println("======================================");
      */
 
     memset(buffer, 0, sizeof(buffer));
-
-    put_u16(
-        &buffer[0],
-        probeID
-    );
-
-    crc =
-        modbus_crc16(
-            buffer,
-            EVENT_LENGTH - 2
-        );
-
-    put_u16(
-        &buffer[10],
-        crc
-    );
+    put_u16(&buffer[0], probe_id);
+    crc = modbus_crc16(buffer, EVENT_LENGTH - 2);
+    put_u16(&buffer[10], crc);
 
     // 8-byte page
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        0x40,
-        &buffer[0],
-        8
-    );
-
+    eeprom.eepromWrite(DEVICE_ADDRESS, 0x40, &buffer[0], 8);
     delay(10);
 
     // Remaining 4 bytes
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        0x48,
-        &buffer[8],
-        4
-    );
-
+    eeprom.eepromWrite(DEVICE_ADDRESS, 0x48, &buffer[8], 4);
     delay(10);
 
     /*
@@ -518,44 +372,17 @@ Serial.println("======================================");
      */
 
     memset(buffer, 0, sizeof(buffer));
+    put_u16(&buffer[0], probe_id);
 
-    put_u16(
-        &buffer[0],
-        probeID
-    );
+    put_u16(&buffer[2], 0);     // Initial pulse count
+    put_u16(&buffer[4], 0);     // Initial status
 
-    // Initial pulse count
-    put_u16(
-        &buffer[2],
-        0
-    );
+    crc = modbus_crc16(buffer, RUNTIME_LENGTH - 2);
+    put_u16(&buffer[6], crc);
 
-    // Initial status
-    put_u16(
-        &buffer[4],
-        0
-    );
-
-    crc =
-        modbus_crc16(
-            buffer,
-            RUNTIME_LENGTH - 2
-        );
-
-    put_u16(
-        &buffer[6],
-        crc
-    );
-
-    eeprom.eepromWrite(
-        DEVICE_ADDRESS,
-        RUNTIME_ADDRESS,
-        buffer,
-        8
-    );
-
+    eeprom.eepromWrite(DEVICE_ADDRESS, RUNTIME_ADDRESS, buffer, 8);
     delay(10);
-
+    
     /*
      * =================================================
      * COMPLETE
@@ -564,7 +391,6 @@ Serial.println("======================================");
 
     Serial.println("AT21CS01 PROBE SAVE COMPLETED");
     Serial.println("======================================");
-
     return true;
 }
 
@@ -741,7 +567,6 @@ bool readProbeFromAT21CS01(Device &device)
     // =================================================
     // FIND PROBE INFORMATION FROM DATABASE
     // =================================================
-
     device.id = String(probeID);
 
     for (int i = 0; i < TOTAL_PROBES; i++)
@@ -757,17 +582,14 @@ bool readProbeFromAT21CS01(Device &device)
             break;
         }
     }
-
     // =================================================
     // UPDATE DEVICE DATA
     // =================================================
-
     device.totalPulse = pulseCount;
     device.totalCycle = cycleCount;
 
-    // Internal product settings
-device.useTime = 24;
-device.expiryYear = 2;
+    device.useTime = 24;
+    device.expiryYear = 2;
 
     // =================================================
     // DEBUG OUTPUT
