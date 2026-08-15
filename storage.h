@@ -80,13 +80,13 @@ void saveDevice(Device &device)
     );
 
     // Probe values
-    // Internal product settings
-    // Expiry = 2 years
-    // Use time = 24 hours
-    data.expiryYear = 2;
-    data.totalCycle = device.totalCycle;
-    data.totalPulse = device.totalPulse;
-    data.useTime = 24;
+   // Internal product settings
+// Expiry = 2 years
+// Use time = 24 hours
+data.expiryYear = 2;
+data.totalCycle = device.totalCycle;
+data.totalPulse = device.totalPulse;
+data.useTime = 24;
 
     // Internal thresholds
     data.startThreshold = 0;
@@ -567,6 +567,7 @@ bool readProbeFromAT21CS01(Device &device)
     // =================================================
     // FIND PROBE INFORMATION FROM DATABASE
     // =================================================
+
     device.id = String(probeID);
 
     for (int i = 0; i < TOTAL_PROBES; i++)
@@ -582,14 +583,17 @@ bool readProbeFromAT21CS01(Device &device)
             break;
         }
     }
+
     // =================================================
     // UPDATE DEVICE DATA
     // =================================================
+
     device.totalPulse = pulseCount;
     device.totalCycle = cycleCount;
 
-    device.useTime = 24;
-    device.expiryYear = 2;
+    // Internal product settings
+device.useTime = 24;
+device.expiryYear = 2;
 
     // =================================================
     // DEBUG OUTPUT
