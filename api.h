@@ -55,12 +55,12 @@ void handleSave()
     }
 
     device.id = server.arg("id");
-// Dashboard dropdown values are ignored internally.
-// Product configuration is fixed to:
-// Expiry = 2 years
-// Use Time = 24 hours
-device.expiryYear = 2;
-device.useTime = 24;
+    // Dashboard dropdown values are ignored internally.
+    // Product configuration is fixed to:
+    // Expiry = 2 years
+    // Use Time = 24 hours
+    device.expiryYear = 2;
+    device.useTime = 24;
 
 for (int i = 0; i < TOTAL_PROBES; i++)
 {
@@ -87,12 +87,12 @@ if (!eepromSaved)
     return;
 }
 
-Serial.println("===== DATABASE MATCH =====");
-Serial.println(device.id);
-Serial.println(device.probeName);
-Serial.println(device.totalCycle);
-Serial.println(device.totalPulse);
-Serial.println("==========================");
+    Serial.println("===== DATABASE MATCH =====");
+    Serial.println(device.id);
+    Serial.println(device.probeName);
+    Serial.println(device.totalCycle);
+    Serial.println(device.totalPulse);
+    Serial.println("==========================");
     Serial.println();
     Serial.println("======================================");
     Serial.println("DATA SAVED TO FLASH");
@@ -120,7 +120,16 @@ Serial.println("==========================");
 
     Serial.println("======================================");
 
-    server.send(200, "text/plain", "Saved Successfully");
+    String response = "{";
+    response += "\"probeName\":\"" + device.probeName + "\",";
+    response += "\"pulseStrategy\":\"" + device.pulseStrategy + "\",";
+    response += "\"totalCycle\":" + String(device.totalCycle) + ",";
+    response += "\"totalPulse\":" + String(device.totalPulse) + ",";
+    response += "\"expiry\":" + String(device.expiryYear) + ",";
+    response += "\"useTime\":" + String(device.useTime);
+    response += "}";
+
+    server.send(200, "application/json", response);
 }
 
 void handleRead()
@@ -172,29 +181,29 @@ void handleRead()
     // READ PROBE FROM AT21CS01
     // -------------------------------------------------
     Serial.println();
-Serial.println("========== DEBUG FIRST READ ==========");
+    Serial.println("========== DEBUG FIRST READ ==========");
 
-Serial.print("Requested ID : ");
-Serial.println(device.id);
+    Serial.print("Requested ID : ");
+    Serial.println(device.id);
 
-Serial.println("STEP 1: Before EEPROM reset");
+    Serial.println("STEP 1: Before EEPROM reset");
 
-eeprom.reset();
+    eeprom.reset();
 
-Serial.println("STEP 2: EEPROM reset completed");
+    Serial.println("STEP 2: EEPROM reset completed");
 
-delay(20);
+    delay(20);
 
-Serial.println("STEP 3: Starting readProbeFromAT21CS01()");
+    Serial.println("STEP 3: Starting readProbeFromAT21CS01()");
 
-bool eepromReadOK = readProbeFromAT21CS01(device);
+    bool eepromReadOK = readProbeFromAT21CS01(device);
 
-Serial.println("STEP 4: readProbeFromAT21CS01() returned");
+    Serial.println("STEP 4: readProbeFromAT21CS01() returned");
 
-Serial.print("READ RESULT : ");
-Serial.println(eepromReadOK ? "TRUE" : "FALSE");
+    Serial.print("READ RESULT : ");
+    Serial.println(eepromReadOK ? "TRUE" : "FALSE");
 
-Serial.println("======================================");
+    Serial.println("======================================");
 
     if (!eepromReadOK)
     {

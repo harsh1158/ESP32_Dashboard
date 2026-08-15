@@ -598,12 +598,38 @@ submitButton.addEventListener("click", function()
         },
         body: formData.toString()
     })
-    .then(response => response.text())
-    .then(data =>
+    .then(response =>
+{
+    if(!response.ok)
     {
-        statusMessage.innerHTML = data;
-        statusMessage.style.color = "green";
-    });
+        throw new Error("Save failed");
+    }
+
+    return response.json();
+})
+.then(data =>
+{
+    pulseStrategy.value = data.pulseStrategy;
+    totalCycle.value = data.totalCycle;
+    totalPulse.value = data.totalPulse;
+
+    expiryYear.value = data.expiry;
+    useTime.value = data.useTime;
+
+    statusMessage.innerHTML =
+        data.probeName + " Saved Successfully";
+
+    statusMessage.style.color = "green";
+})
+.catch(error =>
+{
+    console.log(error);
+
+    statusMessage.innerHTML =
+        "Save Failed";
+
+    statusMessage.style.color = "red";
+});
 });
 
 //----------------------------------------------------
@@ -625,7 +651,7 @@ idDropdown.addEventListener("change", function()
     }
 
     statusMessage.innerHTML =
-        "Probe " + id + " selected. Click Read.";
+        "Probe " + id + " selected. Click Submit.";
 
     statusMessage.style.color = "black";
 });

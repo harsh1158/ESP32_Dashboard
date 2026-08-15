@@ -326,6 +326,7 @@ void testAllProbeDataRead()
     Serial.println("ALL PROBE DATA READ TEST COMPLETE");
     Serial.println("======================================");
 }
+
 void setup()
 {
     Serial.begin(115200);
@@ -368,27 +369,27 @@ void setup()
     //testAllProbeDataRead();
     
     Serial.println();
-Serial.println("======================================");
-Serial.println("AT21CS01 BOOT READ TEST");
-Serial.println("======================================");
+    Serial.println("======================================");
+    Serial.println("AT21CS01 BOOT READ TEST");
+    Serial.println("======================================");
 
-delay(1000);
+    delay(1000);
 
-eeprom.reset();
+    eeprom.reset();
 
-delay(100);
+    delay(100);
 
-Device bootTestDevice;
-bootTestDevice.id = "1";
+    Device bootTestDevice;
+    bootTestDevice.id = "1";
 
-Serial.println("Reading Probe-1 immediately after boot...");
+    Serial.println("Reading Probe-1 immediately after boot...");
 
-bool bootReadOK = readProbeFromAT21CS01(bootTestDevice);
+    bool bootReadOK = readProbeFromAT21CS01(bootTestDevice);
 
-Serial.print("BOOT READ RESULT : ");
-Serial.println(bootReadOK ? "TRUE" : "FALSE");
+    Serial.print("BOOT READ RESULT : ");
+    Serial.println(bootReadOK ? "TRUE" : "FALSE");
 
-Serial.println("======================================");
+    Serial.println("======================================");
 
     Serial.println("******** SETUP START ********");
     Serial.println("Before prefs.begin()");
@@ -453,24 +454,23 @@ Serial.println("======================================");
     Serial.println("------------------------------");
 
     /*****************************************************
- * Start HTTP Server
- *****************************************************/
+    * Start HTTP Server
+    *****************************************************/
 
-server.on("/", handleRoot);
-server.on("/login", HTTP_POST, handleLogin);
-server.on("/changeLogin", HTTP_POST, handleChangeLogin);
-server.on("/logout", HTTP_GET, handleLogout);
-server.on("/save", HTTP_POST, handleSave);
-server.on("/read", HTTP_GET, handleRead);
-server.begin();
+    server.on("/", handleRoot);
+    server.on("/login", HTTP_POST, handleLogin);
+    server.on("/changeLogin", HTTP_POST, handleChangeLogin);
+    server.on("/logout", HTTP_GET, handleLogout);
+    server.on("/save", HTTP_POST, handleSave);
+    server.on("/read", HTTP_GET, handleRead);
+    server.begin();
 
-Serial.println();
-Serial.println("======================================");
-Serial.println("HTTP Server Started Successfully");
-Serial.print("Open Browser : http://");
-Serial.println(WiFi.localIP());
-Serial.println("======================================");
-
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("HTTP Server Started Successfully");
+    Serial.print("Open Browser : http://");
+    Serial.println(WiFi.localIP());
+    Serial.println("======================================");
 }
 
 void testEEPROMDeviceStorage()
@@ -586,7 +586,7 @@ void testEEPROMDeviceStorage()
         delay(5);
     }
     Serial.println();
-Serial.println("EEPROM RAW BYTES:");
+    Serial.println("EEPROM RAW BYTES:");
 
 for (uint16_t i = 0; i < sizeof(DeviceStorage); i++)
 {
