@@ -80,13 +80,13 @@ void saveDevice(Device &device)
     );
 
     // Probe values
-   // Internal product settings
-// Expiry = 2 years
-// Use time = 24 hours
-data.expiryYear = 2;
-data.totalCycle = device.totalCycle;
-data.totalPulse = device.totalPulse;
-data.useTime = 24;
+    // Internal product settings
+    // Expiry = 2 years
+    // Use time = 24 hours
+    data.expiryYear = 2;
+    data.totalCycle = device.totalCycle;
+    data.totalPulse = device.totalPulse;
+    data.useTime = 24;
 
     // Internal thresholds
     data.startThreshold = 0;
@@ -382,7 +382,7 @@ bool saveProbeToAT21CS01(const char *c_probeId)
 
     eeprom.eepromWrite(DEVICE_ADDRESS, RUNTIME_ADDRESS, buffer, 8);
     delay(10);
-    
+
     /*
      * =================================================
      * COMPLETE

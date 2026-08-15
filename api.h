@@ -21,8 +21,7 @@ void handleRoot()
 if(loggedIn)
 {
     server.send(200,"text/html",MAIN_page);
-}
-else
+} else
 {
     server.send(200,"text/html",LOGIN_PAGE);
 }
@@ -149,7 +148,6 @@ void handleRead()
         );
         return;
     }
-
     // -------------------------------------------------
     // Get selected Probe ID from Dashboard
     // -------------------------------------------------
@@ -168,27 +166,19 @@ void handleRead()
     // -------------------------------------------------
     Serial.println();
     Serial.println("========== DEBUG FIRST READ ==========");
-
     Serial.print("Requested ID : ");
     Serial.println(device.id);
-
     Serial.println("STEP 1: Before EEPROM reset");
-
     eeprom.reset();
-
     Serial.println("STEP 2: EEPROM reset completed");
-
     delay(20);
-
     Serial.println("STEP 3: Starting readProbeFromAT21CS01()");
 
     bool eepromReadOK = readProbeFromAT21CS01(device);
 
     Serial.println("STEP 4: readProbeFromAT21CS01() returned");
-
     Serial.print("READ RESULT : ");
     Serial.println(eepromReadOK ? "TRUE" : "FALSE");
-
     Serial.println("======================================");
 
     if (!eepromReadOK)
@@ -201,10 +191,8 @@ void handleRead()
             "text/plain",
             "AT21CS01 Probe Read Failed"
         );
-
         return;
     }
-
     // -------------------------------------------------
     // Print data read from AT21CS01
     // -------------------------------------------------
