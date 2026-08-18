@@ -801,10 +801,22 @@ readButton.addEventListener("click", async function()
             totalCycle.value = data.totalCycle;
             totalPulse.value = data.totalPulse;
 
-            setStatusMessage(
-                data.probeName + " Read Successfully",
-                "green"
-            );
+            if(data.expired)
+            {
+                setStatusMessage(
+                data.probeName + " - Probe Expired",
+                "red"
+                );
+
+                console.log("PROBE STATUS : EXPIRED");
+            } else
+            {
+                setStatusMessage(
+                    data.probeName + " Read Successfully",
+                    "green"
+                );
+                console.log("PROBE STATUS : VALID");
+            }
 
             console.log(
                 "EEPROM READ SUCCESS on attempt " +

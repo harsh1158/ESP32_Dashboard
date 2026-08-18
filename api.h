@@ -66,7 +66,7 @@ void handleSave()
     saveDevice(tmpDevice);
 
     // Store into the ATS21CS01
-    bool eepromSaved = saveProbeToAT21CS01(tmpDevice.id.c_str());
+    bool eepromSaved = saveProbeToAT21CS01(tmpDevice.id.c_str());         
     if (!eepromSaved) {
         Serial.println("ERROR: AT21CS01 SAVE FAILED");
         server.send(500, "text/plain", "Flash Saved But AT21CS01 Save Failed");
@@ -180,7 +180,9 @@ void handleRead()
 
     Serial.println("STEP 3: Starting readProbeFromAT21CS01()");
 
-    bool eepromReadOK = readProbeFromAT21CS01(device);
+    bool probeExpired = false;
+
+    bool eepromReadOK = readProbeFromAT21CS01(device, probeExpired);
 
     Serial.println("STEP 4: readProbeFromAT21CS01() returned");
 
@@ -245,7 +247,8 @@ void handleRead()
     json += "\"probeName\":\"" + device.probeName + "\",";
     json += "\"pulseStrategy\":\"" + device.pulseStrategy + "\",";
     json += "\"totalCycle\":" + String(device.totalCycle) + ",";
-    json += "\"totalPulse\":" + String(device.totalPulse);
+    json += "\"totalPulse\":" + String(device.totalPulse) + ",";
+    json += "\"expired\":" + String(probeExpired ? "true" : "false");
 
     json += "}";
 

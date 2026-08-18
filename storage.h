@@ -154,7 +154,7 @@ bool saveProbeToAT21CS01(const char *c_probeId)
      * 8-9    End Threshold
      * 10-13  End Time
      * 14-17  Expiry Time
-     * 18-25  Creation Time
+     * 18-25  Creation Date Time
      * 26-27  CRC
      */
 
@@ -163,16 +163,41 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     put_u16(&buffer[0], probe_id);
     put_u16(&buffer[2], probe->totalPulse);
     put_u16(&buffer[4], probe->totalCycle);
-    put_u16(&buffer[6], 0);                 // Start threshold
-    put_u16(&buffer[8], probe->totalPulse); // End threshold
-    put_u32(&buffer[10], 900);              // endThresholdTime = 900 seconds
-    put_u32(&buffer[14], 63072000UL);       // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
+    put_u16(&buffer[6], 0);                  // Start threshold
+    put_u16(&buffer[8], probe->totalPulse);  // End threshold
+    put_u32(&buffer[10], 86400UL);           // endThresholdTime = 86400 seconds
+    put_u32(&buffer[14], 63072000UL);             // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
     
-    // Creation time = 0 for now
-    for (int i = 18; i <= 25; i++)
+    // =================================================
+    // DATE/TIME
+    // =================================================
+
+    struct tm timeinfo;
+
+    if (!getLocalTime(&timeinfo, 10000))
     {
-        buffer[i] = 0;
+        Serial.println("ERROR: Failed to get current date/time");
+        return false;
     }
+
+    put_u16(&buffer[18], timeinfo.tm_year + 1900);
+
+    buffer[20] = timeinfo.tm_mon + 1;
+    buffer[21] = timeinfo.tm_mday;
+    buffer[22] = timeinfo.tm_hour;
+    buffer[23] = timeinfo.tm_min;
+    buffer[24] = timeinfo.tm_sec;
+    buffer[25] = 0;   // Reserved
+
+    Serial.printf(
+        "Creation Date/Time : %04d-%02d-%02d %02d:%02d:%02d\n",
+        timeinfo.tm_year + 1900,
+        timeinfo.tm_mon + 1,
+        timeinfo.tm_mday,
+        timeinfo.tm_hour,
+        timeinfo.tm_min,
+        timeinfo.tm_sec
+    );
 
     /*
      * =================================================
@@ -216,7 +241,7 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     Serial.println(probe->totalPulse);
 
     Serial.print("End Time          : ");
-    Serial.println(900);
+    Serial.println(86400UL);
 
     Serial.print("Expiry Time       : ");
     Serial.println(63072000UL);
@@ -394,8 +419,10 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     return true;
 }
 
-bool readProbeFromAT21CS01(Device &device)
+bool readProbeFromAT21CS01(Device &device, bool &probeExpired)
 {
+    probeExpired = false;
+
     uint8_t buffer[28];
 
     uint16_t probeID;
@@ -565,6 +592,85 @@ bool readProbeFromAT21CS01(Device &device)
         ((uint32_t)buffer[17] << 24);
 
     // =================================================
+    // DECODE CREATION DATE/TIME
+    // EEPROM buffer[18] - buffer[25]
+    // =================================================
+
+    struct tm creationTime;
+
+    memset(&creationTime, 0, sizeof(creationTime));
+
+    creationTime.tm_year =
+        ((uint16_t)buffer[18]) |
+        ((uint16_t)buffer[19] << 8);
+
+    creationTime.tm_year -= 1900;
+
+    creationTime.tm_mon = buffer[20] - 1;
+    creationTime.tm_mday = buffer[21];
+    creationTime.tm_hour = buffer[22];
+    creationTime.tm_min = buffer[23];
+    creationTime.tm_sec = buffer[24];
+
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("PROBE CREATION DATE/TIME");
+    Serial.println("======================================");
+
+    Serial.printf(
+        "Creation Date/Time : %04d-%02d-%02d %02d:%02d:%02d\n",
+        creationTime.tm_year + 1900,
+        creationTime.tm_mon + 1,
+        creationTime.tm_mday,
+        creationTime.tm_hour,
+        creationTime.tm_min,
+        creationTime.tm_sec
+    );
+
+    Serial.print("Expiry Duration   : ");
+    Serial.print(expiryTime);
+    Serial.println(" seconds");
+    
+    // =================================================
+    // CHECK PROBE EXPIRY
+    // =================================================
+
+    time_t creationEpoch = mktime(&creationTime);
+
+    struct tm currentTime;
+
+    if (!getLocalTime(&currentTime, 10000))
+    {
+        Serial.println("ERROR: Failed to get current date/time");
+        return false;
+    }
+
+    time_t currentEpoch = mktime(&currentTime);
+
+    time_t expiryEpoch =
+        creationEpoch + expiryTime;
+
+    probeExpired =
+        currentEpoch >= expiryEpoch;
+
+    Serial.printf(
+        "Current Date/Time  : %04d-%02d-%02d %02d:%02d:%02d\n",
+        currentTime.tm_year + 1900,
+        currentTime.tm_mon + 1,
+        currentTime.tm_mday,
+        currentTime.tm_hour,
+        currentTime.tm_min,
+        currentTime.tm_sec
+    );
+
+    Serial.printf(
+        "Probe Expired      : %s\n",
+        probeExpired ? "YES" : "NO"
+    );
+
+    Serial.println("======================================");
+
+    // =================================================
     // FIND PROBE INFORMATION FROM DATABASE
     // =================================================
 
@@ -592,8 +698,8 @@ bool readProbeFromAT21CS01(Device &device)
     device.totalCycle = cycleCount;
 
     // Internal product settings
-device.useTime = 24;
-device.expiryYear = 2;
+    device.useTime = 24;
+    device.expiryYear = 2;
 
     // =================================================
     // DEBUG OUTPUT

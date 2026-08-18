@@ -78,6 +78,39 @@ void setup()
         Serial.print(".");
     }
 
+    // =====================================================
+    // NTP TIME CONFIGURATION
+    // India = UTC + 5:30
+    // =====================================================
+
+    configTime(
+        19800,          // GMT offset = +5:30
+        0,              // Daylight saving offset
+        "pool.ntp.org",
+        "time.nist.gov"
+    );
+
+    Serial.println();
+    Serial.println("Synchronizing time with NTP...");
+
+    struct tm timeinfo;
+
+    if (getLocalTime(&timeinfo, 10000))
+    {
+        Serial.printf(
+            "Current Date/Time : %04d-%02d-%02d %02d:%02d:%02d\n",
+            timeinfo.tm_year + 1900,
+            timeinfo.tm_mon + 1,
+            timeinfo.tm_mday,
+            timeinfo.tm_hour,
+            timeinfo.tm_min,
+            timeinfo.tm_sec
+        );
+    }
+    else {
+        Serial.println("ERROR: NTP time synchronization failed");
+    }
+
     Serial.println();
     Serial.println("------------------------------");
     Serial.println("WiFi Connected Successfully");
