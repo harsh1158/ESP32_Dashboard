@@ -180,9 +180,7 @@ void handleRead()
 
     Serial.println("STEP 3: Starting readProbeFromAT21CS01()");
 
-    bool probeExpired = false;
-
-    bool eepromReadOK = readProbeFromAT21CS01(device, probeExpired);
+    bool eepromReadOK = readProbeFromAT21CS01(device);
 
     Serial.println("STEP 4: readProbeFromAT21CS01() returned");
 

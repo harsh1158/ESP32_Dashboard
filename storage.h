@@ -10,6 +10,7 @@
 
 extern AT21CS01 eeprom;
 extern Preferences prefs;
+bool probeExpired = false;
 
 void saveStruct(String key, DeviceStorage &data)
 {
@@ -166,7 +167,7 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     put_u16(&buffer[6], 0);                  // Start threshold
     put_u16(&buffer[8], probe->totalPulse);  // End threshold
     put_u32(&buffer[10], 86400UL);           // endThresholdTime = 86400 seconds
-    put_u32(&buffer[14], 63072000UL);             // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
+    put_u32(&buffer[14], 300UL);             // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
     
     // =================================================
     // DATE/TIME
@@ -244,7 +245,7 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     Serial.println(86400UL);
 
     Serial.print("Expiry Time       : ");
-    Serial.println(63072000UL);
+    Serial.println(300UL);
 
     Serial.print("CRC               : 0x");
     Serial.println(crc, HEX);
@@ -419,10 +420,8 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     return true;
 }
 
-bool readProbeFromAT21CS01(Device &device, bool &probeExpired)
+bool readProbeFromAT21CS01(Device &device)
 {
-    probeExpired = false;
-
     uint8_t buffer[28];
 
     uint16_t probeID;
@@ -592,85 +591,6 @@ bool readProbeFromAT21CS01(Device &device, bool &probeExpired)
         ((uint32_t)buffer[17] << 24);
 
     // =================================================
-    // DECODE CREATION DATE/TIME
-    // EEPROM buffer[18] - buffer[25]
-    // =================================================
-
-    struct tm creationTime;
-
-    memset(&creationTime, 0, sizeof(creationTime));
-
-    creationTime.tm_year =
-        ((uint16_t)buffer[18]) |
-        ((uint16_t)buffer[19] << 8);
-
-    creationTime.tm_year -= 1900;
-
-    creationTime.tm_mon = buffer[20] - 1;
-    creationTime.tm_mday = buffer[21];
-    creationTime.tm_hour = buffer[22];
-    creationTime.tm_min = buffer[23];
-    creationTime.tm_sec = buffer[24];
-
-    Serial.println();
-    Serial.println("======================================");
-    Serial.println("PROBE CREATION DATE/TIME");
-    Serial.println("======================================");
-
-    Serial.printf(
-        "Creation Date/Time : %04d-%02d-%02d %02d:%02d:%02d\n",
-        creationTime.tm_year + 1900,
-        creationTime.tm_mon + 1,
-        creationTime.tm_mday,
-        creationTime.tm_hour,
-        creationTime.tm_min,
-        creationTime.tm_sec
-    );
-
-    Serial.print("Expiry Duration   : ");
-    Serial.print(expiryTime);
-    Serial.println(" seconds");
-    
-    // =================================================
-    // CHECK PROBE EXPIRY
-    // =================================================
-
-    time_t creationEpoch = mktime(&creationTime);
-
-    struct tm currentTime;
-
-    if (!getLocalTime(&currentTime, 10000))
-    {
-        Serial.println("ERROR: Failed to get current date/time");
-        return false;
-    }
-
-    time_t currentEpoch = mktime(&currentTime);
-
-    time_t expiryEpoch =
-        creationEpoch + expiryTime;
-
-    probeExpired =
-        currentEpoch >= expiryEpoch;
-
-    Serial.printf(
-        "Current Date/Time  : %04d-%02d-%02d %02d:%02d:%02d\n",
-        currentTime.tm_year + 1900,
-        currentTime.tm_mon + 1,
-        currentTime.tm_mday,
-        currentTime.tm_hour,
-        currentTime.tm_min,
-        currentTime.tm_sec
-    );
-
-    Serial.printf(
-        "Probe Expired      : %s\n",
-        probeExpired ? "YES" : "NO"
-    );
-
-    Serial.println("======================================");
-
-    // =================================================
     // FIND PROBE INFORMATION FROM DATABASE
     // =================================================
 
@@ -728,6 +648,102 @@ bool readProbeFromAT21CS01(Device &device, bool &probeExpired)
 
     Serial.print("Expiry Time   : ");
     Serial.println(expiryTime);
+
+    Serial.println("======================================");
+
+    // =================================================
+    // READ PROBE RUNTIME DATA
+    // EEPROM address: 0x0050
+    // =================================================
+
+    uint8_t runtimeBuffer[8];
+
+    uint16_t runtimeProbeID;
+    uint16_t runtimePulseCount;
+    uint16_t runtimeExpiredStatus;
+    uint16_t runtimeStoredCRC;
+    uint16_t runtimeCalculatedCRC;
+
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("READING PROBE RUNTIME DATA");
+    Serial.println("======================================");
+
+    noInterrupts();
+
+    eeprom.randomRead(0xA0, 0x50, runtimeBuffer, 8);
+
+    interrupts();
+    delayMicroseconds(1000);
+
+    // -------------------------------------------------
+    // Decode runtime data
+    // -------------------------------------------------
+
+    runtimeProbeID =
+        ((uint16_t)runtimeBuffer[0]) |
+        ((uint16_t)runtimeBuffer[1] << 8);
+
+    runtimePulseCount =
+        ((uint16_t)runtimeBuffer[2]) |
+        ((uint16_t)runtimeBuffer[3] << 8);
+
+    runtimeExpiredStatus =
+        ((uint16_t)runtimeBuffer[4]) |
+        ((uint16_t)runtimeBuffer[5] << 8);
+
+    runtimeStoredCRC =
+        ((uint16_t)runtimeBuffer[6]) |
+        ((uint16_t)runtimeBuffer[7] << 8);
+
+    runtimeCalculatedCRC =
+        modbus_crc16(runtimeBuffer, 6);
+
+    Serial.printf(
+        "Runtime Probe ID : %u\n",
+        runtimeProbeID
+    );
+
+    Serial.printf(
+        "Runtime Pulse    : %u\n",
+        runtimePulseCount
+    );
+
+    Serial.printf(
+        "Runtime Status   : 0x%04X\n",
+        runtimeExpiredStatus
+    );
+
+    Serial.printf(
+        "Runtime CRC      : 0x%04X\n",
+        runtimeStoredCRC
+    );
+
+    Serial.printf(
+        "Calculated CRC   : 0x%04X\n",
+        runtimeCalculatedCRC
+    );
+
+    // -------------------------------------------------
+    // Runtime CRC check
+    // -------------------------------------------------
+
+    if (runtimeStoredCRC != runtimeCalculatedCRC)
+    {
+        Serial.println("ERROR: RUNTIME CRC MISMATCH");
+        Serial.println("======================================");
+        return false;
+    }
+
+    if (runtimeExpiredStatus == 0x0002)
+    {
+        probeExpired = true;
+        Serial.println("PROBE EXPIRED : YES");
+    } else
+    {
+        probeExpired = false;
+        Serial.println("PROBE EXPIRED : NO");
+    }
 
     Serial.println("======================================");
 

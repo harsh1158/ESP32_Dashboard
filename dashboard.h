@@ -760,7 +760,7 @@ readButton.addEventListener("click", async function()
         return;
     }*/
 
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 4;
     const RETRY_DELAY = 150;
 
     statusMessage.innerHTML =
@@ -801,21 +801,18 @@ readButton.addEventListener("click", async function()
             totalCycle.value = data.totalCycle;
             totalPulse.value = data.totalPulse;
 
-            if(data.expired)
+            if (data.expired)
             {
                 setStatusMessage(
-                data.probeName + " - Probe Expired",
-                "red"
+                    "Probe Expired",
+                    "red"
                 );
-
-                console.log("PROBE STATUS : EXPIRED");
             } else
             {
                 setStatusMessage(
                     data.probeName + " Read Successfully",
                     "green"
                 );
-                console.log("PROBE STATUS : VALID");
             }
 
             console.log(
