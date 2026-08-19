@@ -177,20 +177,20 @@ bool saveProbeToAT21CS01(const char *c_probeId)
         return false;
     }
 
-time_t creationEpoch = mktime(&timeinfo);
+    time_t creationEpoch = mktime(&timeinfo);
 
-// Store Epoch as 4 bytes
-uint32_t epoch = (uint32_t)creationEpoch;
+    // Store Epoch as 4 bytes
+    uint32_t epoch = (uint32_t)creationEpoch;
 
-buffer[18] = (epoch >> 24) & 0xFF;
-buffer[19] = (epoch >> 16) & 0xFF;
-buffer[20] = (epoch >> 8) & 0xFF;
-buffer[21] = epoch & 0xFF;
+    buffer[18] = (epoch >> 24) & 0xFF;
+    buffer[19] = (epoch >> 16) & 0xFF;
+    buffer[20] = (epoch >> 8) & 0xFF;
+    buffer[21] = epoch & 0xFF;
 
-Serial.printf(
-    "Creation Epoch : %lu\n",
-    (unsigned long)epoch
-);
+    Serial.printf(
+        "Creation Epoch : %lu\n",
+        (unsigned long)epoch
+    );
 
     Serial.printf(
         "Creation Date/Time : %04d-%02d-%02d %02d:%02d:%02d\n",
