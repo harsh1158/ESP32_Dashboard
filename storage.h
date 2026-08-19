@@ -38,24 +38,24 @@ void readStruct(String key, DeviceStorage &data)
 }
 
 void saveString(String key, String value)
-    {
-        prefs.putString(key.c_str(), value);
-    }
+{
+    prefs.putString(key.c_str(), value);
+}
 
 String readString(String key, String defaultValue = "")
-    {
-        return prefs.getString(key.c_str(), defaultValue);
-    }
+{
+    return prefs.getString(key.c_str(), defaultValue);
+}
 
-    void saveInt(String key, int value)
-    {
-        prefs.putInt(key.c_str(), value);
-    }
+void saveInt(String key, int value)
+{
+    prefs.putInt(key.c_str(), value);
+}
 
 int readInt(String key, int defaultValue = 0)
-    {
-        return prefs.getInt(key.c_str(), defaultValue);
-    }
+{
+    return prefs.getInt(key.c_str(), defaultValue);
+}
 
 void saveDevice(Device &device)
 {
