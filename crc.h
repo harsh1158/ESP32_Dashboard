@@ -21,6 +21,11 @@ static uint16_t modbus_crc16(const uint8_t *data, uint16_t length)
     return crc;
 }
 
+static void put_u8(uint8_t *buffer, uint16_t value)
+{
+    buffer[0] = value & 0xFF;
+}
+
 static void put_u16(uint8_t *buffer, uint16_t value)
 {
     buffer[0] = value & 0xFF;
