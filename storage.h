@@ -163,7 +163,7 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     put_u16(&buffer[6], 0);                  // Start threshold
     put_u16(&buffer[8], probe->totalPulse);  // End threshold
     put_u32(&buffer[10], 86400UL);           // endThresholdTime = 86400 seconds
-    put_u32(&buffer[14], 300UL);        // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
+    put_u32(&buffer[14], 63072000UL);        // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
     
     // =================================================
     // DATE/TIME
@@ -247,7 +247,7 @@ Serial.printf(
     Serial.println(86400UL);
 
     Serial.print("Expiry Time       : ");
-    Serial.println(300UL);
+    Serial.println(63072000UL);
 
     Serial.print("CRC               : 0x");
     Serial.println(crc, HEX);
