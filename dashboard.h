@@ -953,8 +953,8 @@ document.addEventListener("click", function(event)
 changePasswordMenu.addEventListener("click", function(event)
 {
     event.stopPropagation();
-accountMenu.style.display = "none";
-changePasswordModal.style.display = "block";
+    accountMenu.style.display = "none";
+    changePasswordModal.style.display = "block";
 });
 
 logoutMenu.addEventListener("click", function(event)

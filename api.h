@@ -18,14 +18,13 @@ void handleRoot()
         );
         return;
     }
-if(loggedIn)
-{
-    server.send(200,"text/html",MAIN_page);
-}
-else
-{
-    server.send(200,"text/html",LOGIN_PAGE);
-}
+    if(loggedIn)
+    {
+        server.send(200,"text/html",MAIN_page);
+    } else
+    {
+        server.send(200,"text/html",LOGIN_PAGE);
+    }
 }
 
 /*****************************************************
@@ -294,8 +293,7 @@ void handleLogin()
     server.send(200,
                 "text/plain",
                 "Login Success");
-}
-    else
+    } else
     {
         server.send(401,
                     "text/plain",

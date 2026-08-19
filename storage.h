@@ -38,24 +38,24 @@ void readStruct(String key, DeviceStorage &data)
 }
 
 void saveString(String key, String value)
-{
-    prefs.putString(key.c_str(), value);
-}
+    {
+        prefs.putString(key.c_str(), value);
+    }
 
 String readString(String key, String defaultValue = "")
-{
-    return prefs.getString(key.c_str(), defaultValue);
-}
+    {
+        return prefs.getString(key.c_str(), defaultValue);
+    }
 
-void saveInt(String key, int value)
-{
-    prefs.putInt(key.c_str(), value);
-}
+    void saveInt(String key, int value)
+    {
+        prefs.putInt(key.c_str(), value);
+    }
 
 int readInt(String key, int defaultValue = 0)
-{
-    return prefs.getInt(key.c_str(), defaultValue);
-}
+    {
+        return prefs.getInt(key.c_str(), defaultValue);
+    }
 
 void saveDevice(Device &device)
 {
@@ -81,21 +81,17 @@ void saveDevice(Device &device)
     );
 
     // Probe values
-   // Internal product settings
-// Expiry = 2 years
-// Use time = 24 hours
-data.expiryYear = 2;
-data.totalCycle = device.totalCycle;
-data.totalPulse = device.totalPulse;
-data.useTime = 24;
+    // Internal product settings
+    data.expiryYear = 2;                        // Expiry = 2 years
+    data.totalCycle = device.totalCycle;
+    data.totalPulse = device.totalPulse;
+    data.useTime = 24;                              // Use time = 24 hours
 
     // Internal thresholds
     data.startThreshold = 0;
     data.endThreshold = 0;
 
-    // CRC will be added in the next step
     data.crc = 0;
-
     saveStruct(device.id, data);
 }
 
@@ -167,7 +163,7 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     put_u16(&buffer[6], 0);                  // Start threshold
     put_u16(&buffer[8], probe->totalPulse);  // End threshold
     put_u32(&buffer[10], 86400UL);           // endThresholdTime = 86400 seconds
-    put_u32(&buffer[14], 300UL);             // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
+    put_u32(&buffer[14], 63072000UL);        // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
     
     // =================================================
     // DATE/TIME
@@ -245,7 +241,7 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     Serial.println(86400UL);
 
     Serial.print("Expiry Time       : ");
-    Serial.println(300UL);
+    Serial.println(63072000UL);
 
     Serial.print("CRC               : 0x");
     Serial.println(crc, HEX);
