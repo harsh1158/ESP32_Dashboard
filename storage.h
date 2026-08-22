@@ -82,10 +82,10 @@ void saveDevice(Device &device)
 
     // Probe values
     // Internal product settings
-    data.expiryYear = 2;                        // Expiry = 2 years
+    //data.expiryYear = 2;                        // Expiry = 2 years
     data.totalCycle = device.totalCycle;
     data.totalPulse = device.totalPulse;
-    data.useTime = 24;                          // Use time = 24 hours
+    //data.useTime = 24;                          // Use time = 24 hours
 
     // Internal thresholds
     data.startThreshold = 0;
@@ -95,7 +95,7 @@ void saveDevice(Device &device)
     saveStruct(device.id, data);
 }
 
-bool saveProbeToAT21CS01(const char *c_probeId)
+bool saveProbeToAT21CS01(const char *c_probeId, uint32_t useTimeHours, uint32_t expiryYears)
 {
     uint16_t probe_id = atoi(c_probeId);
     const uint8_t DEVICE_ADDRESS = 0xA0;
@@ -162,44 +162,35 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     put_u16(&buffer[4], probe->totalCycle);
     put_u16(&buffer[6], 0);                  // Start threshold
     put_u16(&buffer[8], probe->totalPulse);  // End threshold
-    put_u32(&buffer[10], 86400UL);           // endThresholdTime = 86400 seconds
-    put_u32(&buffer[14], 63072000UL);        // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
-    
+    //put_u32(&buffer[10], 86400UL);           // endThresholdTime = 86400 seconds
+    //put_u32(&buffer[14], 63072000UL);        // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
+
+    uint32_t endTime = useTimeHours * 60UL * 60UL;
+    uint32_t expiryTime = expiryYears * 365UL * 24UL * 60UL * 60UL;
+
+    put_u32(&buffer[10], endTime);
+    put_u32(&buffer[14], expiryTime);
+
     // =================================================
     // DATE/TIME
     // =================================================
 
-    struct tm timeinfo;
+    time_t creationEpoch;
+    time(&creationEpoch);
 
-    if (!getLocalTime(&timeinfo, 10000))
+    if (creationEpoch <= 0)
     {
-        Serial.println("ERROR: Failed to get current date/time");
+        Serial.println("ERROR: Failed to get UTC time");
         return false;
     }
 
-    time_t creationEpoch = mktime(&timeinfo);
-
-    // Store Epoch as 4 bytes
     uint32_t epoch = (uint32_t)creationEpoch;
 
-    buffer[18] = (epoch >> 24) & 0xFF;
-    buffer[19] = (epoch >> 16) & 0xFF;
-    buffer[20] = (epoch >> 8) & 0xFF;
-    buffer[21] = epoch & 0xFF;
+    put_u32(&buffer[18], epoch);
 
     Serial.printf(
         "Creation Epoch : %lu\n",
         (unsigned long)epoch
-    );
-
-    Serial.printf(
-        "Creation Date/Time : %04d-%02d-%02d %02d:%02d:%02d\n",
-        timeinfo.tm_year + 1900,
-        timeinfo.tm_mon + 1,
-        timeinfo.tm_mday,
-        timeinfo.tm_hour,
-        timeinfo.tm_min,
-        timeinfo.tm_sec
     );
 
     /*
@@ -244,10 +235,10 @@ bool saveProbeToAT21CS01(const char *c_probeId)
     Serial.println(probe->totalPulse);
 
     Serial.print("End Time          : ");
-    Serial.println(86400UL);
+    Serial.println(endTime);
 
     Serial.print("Expiry Time       : ");
-    Serial.println(63072000UL);
+    Serial.println(expiryTime);
 
     Serial.print("CRC               : 0x");
     Serial.println(crc, HEX);
@@ -592,6 +583,14 @@ bool readProbeFromAT21CS01(Device &device)
         ((uint32_t)buffer[16] << 16) |
         ((uint32_t)buffer[17] << 24);
 
+    uint32_t creationEpoch;
+    creationEpoch = get_u32(&buffer[18]);
+
+    Serial.printf(
+        "Creation UTC Epoch : %lu\n",
+        (unsigned long)creationEpoch
+    );
+
     // =================================================
     // FIND PROBE INFORMATION FROM DATABASE
     // =================================================
@@ -620,8 +619,10 @@ bool readProbeFromAT21CS01(Device &device)
     device.totalCycle = cycleCount;
 
     // Internal product settings
-    device.useTime = 24;
-    device.expiryYear = 2;
+    //device.useTime = 24;
+    //device.expiryYear = 2;
+    device.useTime = endTime / (60UL * 60UL);
+    device.expiryYear = expiryTime / (365UL * 24UL * 60UL * 60UL);
 
     // =================================================
     // DEBUG OUTPUT

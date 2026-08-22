@@ -48,8 +48,18 @@ void handleSave()
     tmpDevice.id = server.arg("id");
     // Dashboard dropdown values are ignored internally.
     // Product configuration is fixed to:
-    tmpDevice.expiryYear = 2;          // Expiry = 2 years
-    tmpDevice.useTime = 24;            // Use Time = 24 hours
+    //tmpDevice.expiryYear = 2;          // Expiry = 2 years
+    //tmpDevice.useTime = 24;            // Use Time = 24 hours
+
+    // Get values selected from dashboard
+    if (!server.hasArg("expiry") || !server.hasArg("useTime"))
+    {
+        server.send(400, "text/plain", "Missing Expiry or Use Time");
+        return;
+    }
+
+    tmpDevice.expiryYear = server.arg("expiry").toInt();
+    tmpDevice.useTime = server.arg("useTime").toInt();
 
     for (int i = 0; i < TOTAL_PROBES; i++) {
         if (tmpDevice.id == probeDatabase[i].id) {
@@ -65,7 +75,8 @@ void handleSave()
     saveDevice(tmpDevice);
 
     // Store into the ATS21CS01
-    bool eepromSaved = saveProbeToAT21CS01(tmpDevice.id.c_str());         
+    bool eepromSaved = saveProbeToAT21CS01(tmpDevice.id.c_str(), tmpDevice.useTime, tmpDevice.expiryYear);   
+    
     if (!eepromSaved) {
         Serial.println("ERROR: AT21CS01 SAVE FAILED");
         server.send(500, "text/plain", "Flash Saved But AT21CS01 Save Failed");
@@ -121,31 +132,19 @@ void handleRead()
 {
     if (!loggedIn)
     {
-        server.send(
-            401,
-            "text/plain",
-            "Unauthorized"
-        );
+        server.send(401, "text/plain", "Unauthorized");
         return;
     }
 
     if (!isClientAllowed())
     {
-        server.send(
-            403,
-            "text/plain",
-            "Maximum 1 Client Allowed"
-        );
+        server.send(403, "text/plain", "Maximum 1 Client Allowed");
         return;
     }
 
     if (!server.hasArg("id"))
     {
-        server.send(
-            400,
-            "text/plain",
-            "Missing ID"
-        );
+        server.send(400, "text/plain", "Missing ID");
         return;
     }
 

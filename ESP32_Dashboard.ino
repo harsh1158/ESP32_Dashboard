@@ -80,12 +80,12 @@ void setup()
 
     // =====================================================
     // NTP TIME CONFIGURATION
-    // India = UTC + 5:30
+    // India = UTC
     // =====================================================
 
     configTime(
-        19800,          // GMT offset = +5:30
-        0,              // Daylight saving offset
+        0,              // UTC
+        0,              // No daylight saving
         "pool.ntp.org",
         "time.nist.gov"
     );
@@ -98,7 +98,7 @@ void setup()
     if (getLocalTime(&timeinfo, 10000))
     {
         Serial.printf(
-            "Current Date/Time : %04d-%02d-%02d %02d:%02d:%02d\n",
+            "Current UTC Date/Time : %04d-%02d-%02d %02d:%02d:%02d\n",
             timeinfo.tm_year + 1900,
             timeinfo.tm_mon + 1,
             timeinfo.tm_mday,
