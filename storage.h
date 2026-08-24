@@ -239,7 +239,7 @@ bool saveProbeToAT21CS01(const char *c_probeId, uint32_t useTimeHours, uint32_t 
 
     Serial.print("Expiry Time       : ");
     Serial.println(expiryTime);
-
+    
     Serial.print("CRC               : 0x");
     Serial.println(crc, HEX);
 
@@ -592,6 +592,52 @@ bool readProbeFromAT21CS01(Device &device)
     );
 
     // =================================================
+    // CALCULATE UTC EXPIRY
+    // =================================================
+
+    time_t currentEpoch;
+    time(&currentEpoch);
+
+    if (currentEpoch <= 0)
+    {
+        Serial.println("ERROR: Failed to get current UTC time");
+        return false;
+    }
+
+    uint32_t currentUtcEpoch =
+        (uint32_t)currentEpoch;
+
+    uint32_t expiryEpoch =
+        creationEpoch + expiryTime;
+
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("PROBE EXPIRY CHECK");
+    Serial.println("======================================");
+
+    Serial.printf(
+        "Creation UTC Epoch : %lu\n",
+        (unsigned long)creationEpoch
+    );
+
+    Serial.printf(
+        "Expiry Duration    : %lu seconds\n",
+        (unsigned long)expiryTime
+    );
+
+    Serial.printf(
+        "Expiry UTC Epoch   : %lu\n",
+        (unsigned long)expiryEpoch
+    );
+
+    Serial.printf(
+        "Current UTC Epoch  : %lu\n",
+        (unsigned long)currentUtcEpoch
+    );
+
+    Serial.println("======================================");
+
+    // =================================================
     // FIND PROBE INFORMATION FROM DATABASE
     // =================================================
 
@@ -738,18 +784,59 @@ bool readProbeFromAT21CS01(Device &device)
         return false;
     }
 
-    if (runtimeExpiredStatus == 0x0002)
-    {
-        probeExpired = true;
-        Serial.println("PROBE EXPIRED : YES");
-    } else
-    {
-        probeExpired = false;
-        Serial.println("PROBE EXPIRED : NO");
-    }
+    // =================================================
+    // FINAL PROBE STATUS
+    // =================================================
+    //
+    // Runtime Status:
+    // 0x0000 = Can be used
+    // 0x0001 = Already Used
+    // 0x0002 = Expired
+    //
+    // Probe is expired when:
+    // 1. Runtime status is 0x0002
+    // OR
+    // 2. Stored UTC expiry time has passed
+    // =================================================
 
+    bool runtimeExpired =
+        (runtimeExpiredStatus == 0x0002);
+
+    bool timeExpired =
+        (currentUtcEpoch >= expiryEpoch);
+
+    probeExpired =
+        runtimeExpired || timeExpired;
+
+    Serial.println();
+    Serial.println("======================================");
+    Serial.println("FINAL PROBE STATUS");
     Serial.println("======================================");
 
+    Serial.printf(
+        "Runtime Status  : 0x%04X\n",
+        runtimeExpiredStatus
+    );
+
+    Serial.printf(
+        "Time Expired    : %s\n",
+        timeExpired ? "YES" : "NO"
+    );
+
+    Serial.printf(
+        "Runtime Expired : %s\n",
+        runtimeExpired ? "YES" : "NO"
+    );
+
+    if (probeExpired)
+    {
+        Serial.println("PROBE EXPIRED   : YES");
+    } else
+    {
+        Serial.println("PROBE EXPIRED   : NO");
+    }
+    Serial.println("======================================");
+    
     return true;
 }
 
