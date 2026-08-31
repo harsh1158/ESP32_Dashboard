@@ -165,9 +165,12 @@ bool saveProbeToAT21CS01(const char *c_probeId, uint32_t useTimeHours, uint32_t 
     //put_u32(&buffer[10], 86400UL);           // endThresholdTime = 86400 seconds
     //put_u32(&buffer[14], 63072000UL);        // Expiry time = 2 years = 2 × 365 × 24 × 60 × 60 seconds
 
-    uint32_t endTime = useTimeHours * 60UL * 60UL;
-    uint32_t expiryTime = expiryYears * 365UL * 24UL * 60UL * 60UL;
+    //uint32_t endTime = useTimeHours * 60UL * 60UL;
+    //uint32_t expiryTime = expiryYears * 365UL * 24UL * 60UL * 60UL;
 
+    uint32_t endTime = 15UL * 60UL;       // TEST: 15 minutes
+    uint32_t expiryTime = 15UL * 60UL;   // TEST: 15 minutes
+    
     put_u32(&buffer[10], endTime);
     put_u32(&buffer[14], expiryTime);
 
